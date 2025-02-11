@@ -1,0 +1,6 @@
+Pillow
+imagehash
+numpy
+pandas
+ipykernel
+openpyxl
