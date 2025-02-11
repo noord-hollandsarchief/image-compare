@@ -9,7 +9,7 @@ This repository contains code that can find exact duplicates in a directory of i
 - Features
 
 ## Installation
-Step-by-step instructions on how to install and set up your project.
+Step-by-step instructions on how to install and set up the project.
 
 ### Clone the repository
 ```bash
