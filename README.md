@@ -14,6 +14,7 @@ Step-by-step instructions on how to install and set up your project.
 ### Clone the repository
 ```bash
 git clone https://github.com/noord-hollandsarchief/image_compare.git
+```
 
 ### Usage
 Below are two examples of how to run the script:
