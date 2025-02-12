@@ -1,109 +1,125 @@
-# image_compare
+# image-compare
 
 ## Description
-This repository contains code that can find exact duplicates in a directory of images and rank similar images based on resolution and the number of unique colors. The exact duplicates and similar images are identified using a combined approach of file hashing and image hashing. Additionally, the images are (if possible) linked to MaisFlexis based on their accession number and inventory number. This information is specified in the path of the images and is also present in the corresponding MaisFlexis record. The corresponding duplicate/similar images that are not linkable by this information are connected through the matching hash values. The packages required to run the scripts are listed in `requirements.txt`. **Note: This is a work in progress and will continue to be improved.**
+This repository contains code that can find exact duplicates in a directory of images and rank similar images based on resolution and the number of unique colors. The exact duplicates and similar images are identified using a combined approach of file hashing and image hashing. Additionally, the images are (if possible) linked to MaisFlexis based on their accession number and inventory number. This information is specified in the path of the images and is also present in the corresponding MaisFlexis record. The corresponding duplicate/similar images that are not linkable by this information are connected through the matching hash values. The packages required to run the scripts are listed in `requirements.txt`. 
 
+**Note**: This is a work in progress and will continue to be improved.
+
+---
 ## Table of Contents
-- Installation
-- Usage
-- Features
-
-## Installation
-Below are step-by-step instructions on how to install and set up the project using examples. This can of course be adjusted to your liking.
-In this example we first create and navigate to the directory where we want to save the repository. 
-
-**Windows:**
-```bash
-mkdir %USERPROFILE%\Documents\GitHub
-cd %USERPROFILE%\Documents\GitHub
-```
-**macOS/Linux:**
-```bash
-mkdir -p ~/Documents/GitHub
-cd ~/Documents/GitHub
-```
-### Clone the repository
-```bash
-git clone https://github.com/noord-hollandsarchief/image_compare.git
-```
-### Install ExifTool
+- [Install ExifTool](#install-exiftool)
+- [Installation and usage of the repository](#installation-and-usage-of-the-repository)
+   - [Windows](#windows)
+   - [macOS and Linux](#macos-and-linux)
+- [Features](#features)
+---
+## Install ExifTool
 To use ExifTool for extracting EXIF metadata, follow these steps:
 1. **Download ExifTool**:
    Get the latest version of ExifTool by Phil Harvey from the official website: [ExifTool Download.](https://exiftool.org/)
-2. **Installation Instructions**:
+2. **Setting it up**:
    Detailed installation instructions are available here:[ ExifTool Installation.](https://exiftool.org/install.html )
-**Note**: The integration of ExifTool into this program has only been tested with the Windows executable on a Windows machine. Compatibility with other operating systems is not guaranteed at this time.
+   
+**Note**:
+The integration of ExifTool into this program has only been tested with the Windows executable on a Windows machine. Compatibility with other operating systems is not guaranteed at this time.
 
-### Usage
-Below are two examples of how to run the script:
+---
+## Installation and usage of the repository
+Below are step-by-step instructions on how to install and set up the project using examples for both Windows and macOS/Linux. For both Windows and macOS/Linux, two different methods are described each with their own example. 
 
-## First method
-### Navigate to the scripts directory:
-**Windows:**
+---
+### Windows
+Clone the repository
+create and navigate to the directory where the repository will be saved.
 ```bash
-cd %USERPROFILE%\Documents\GitHub\image_compare\scripts
+mkdir %USERPROFILE%\Documents\GitHub && cd %USERPROFILE%\Documents\GitHub
+```
+From here clone the repository
+```bash
+git clone https://github.com/noord-hollandsarchief/image_compare.git
 ```
 
-**macOS/Linux:**
+### Method 1
+Navigate to the project directory and install the dependencies.
 ```bash
-cd ~/Documents/GitHub/image_compare/scripts
+cd %USERPROFILE%\Documents\GitHub\image_compare\ && pip install -r requirements.txt
+```
+Navigate to the scripts directory and run main.py
+```bash
+cd %USERPROFILE%\Documents\GitHub\image_compare\scripts && python main.py
+```
+Follow the prompts:
+- Enter the directory of images to be analyzed.:
+- Enter the directory where ExifTool is installed:
+The pipeline will then start running
+---
+
+### Method 2:
+Alternatively, the `setup.py` file can be run to install the required packages in either your current or a new environment. For this we have to navigate to the scripts directory and run setup.py
+```bash
+cd %USERPROFILE%\Documents\GitHub\image_compare\scripts && python setup.py
 ```
 
-### Install dependencies:
+Follow the prompts:
+- It will ask you if you want to create a new environment or use the current one.
+- If you create a new enviornment you have to specify a name.
+- Then it will install the packages listed in `requirements.txt` in this environment.
+  
+Activate the environment and run the main.py script:
 ```bash
-pip install -r requirements.txt
+cd ..\ && .\yourenv\Scripts\activate && cd scripts && python main.py
 ```
-
-### Run the main.py script:
-```bash
-python main.py
-```
-### Follow the prompts:
+Follow the prompts:
 - Enter the directory of images to be analyzed.:
 - Enter the directory where ExifTool is installed: 
-- Then it will install the packages listed in `requirements.txt` in this environment.
+The pipeline will then start running.
 
-## Second method
-Alternatively, the `setup.py` file can be run to install the required packages in either your current or a new environment. This is done as follows:
-### Navigate to the scripts directory:
-**Windows:**
+---
+### macOS and Linux
+Clone the repository
+create and navigate to the directory where we want to save the repository.
 ```bash
-cd %USERPROFILE%\Documents\GitHub\image_compare\scripts
+mkdir ~Documents/GitHub && cd ~Documents/GitHub
 ```
-**macOS/Linux:**
+From here clone the repository.
 ```bash
-cd ~/Documents/GitHub/image_compare/scripts
+git clone https://github.com/noord-hollandsarchief/image_compare.git
 ```
 
-### Install dependencies in a specific environment:
+### Method 1: 
+Navigate to the project directory and install the dependencies.
 ```bash
-python setup.py
+cd ~/Documents/GitHub/image_compare/ && pip install -r requirements.txt
 ```
-### Follow the prompts:
+Navigate to the scripts directory and run main.py
+```bash
+cd ~/Documents/GitHub/image_compare/scripts && python main.py
+```
+Follow the prompts:
+- Enter the directory of images to be analyzed.:
+- Enter the directory where ExifTool is installed: 
+The analysis will then be done.
+---
+
+### Method 2:
+Alternatively, the `setup.py` file can be run to install the required packages in either your current or a new environment. For this we have to navigate to the scripts directory and run setup.py
+```bash
+cd ~/Documents/GitHub/image_compare/scripts && python setup.py
+```
+Follow the prompts:
 - It will ask you if you want to create a new environment or use the current one.
 - If you create a new enviornment you have to specify a name.
 - Then it will install the packages listed in `requirements.txt` in this environment.
 
-### Activate the environment and run the main.py script:
-**Windows:**
+Activate the environment and run the main.py script:
 ```bash
-cd ..\
-.\yourenv\Scripts\activate
-cd scripts
-python main.py
-
+cd .. && source yourenv/bin/activate && cd scripts && python main.py
 ```
-**macOS/Linux:**
-```bash
-cd ..
-source yourenv/bin/activate
-cd scripts
-python main.py
-```
-### Follow the prompts:
+Follow the prompts:
 - Enter the directory of images to be analyzed.:
 - Enter the directory where ExifTool is installed: 
-- Then it will install the packages listed in `requirements.txt` in this environment.
+The analysis will then be done.
+---
 
 ## Features
 This project provides the following features:
