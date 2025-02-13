@@ -13,15 +13,18 @@ This repository contains code that can find exact duplicates in a directory of i
    - [macOS and Linux](#macos-and-linux)
 - [Features](#features)
 ---
-## Install ExifTool
-To use ExifTool for extracting EXIF metadata, follow these steps:
+## Install ExifTool 
+### Windows
+For Windows users, the ExifTool executable is already prepared and included in the tools folder of this repository.
+
+### macOS and Linux
 1. **Download ExifTool**:
    Get the latest version of ExifTool by Phil Harvey from the official website: [ExifTool Download.](https://exiftool.org/)
 2. **Setting it up**:
    Detailed installation instructions are available here:[ ExifTool Installation.](https://exiftool.org/install.html )
    
 **Note**:
-The integration of ExifTool into this program has only been tested with the Windows executable on a Windows machine. Compatibility with other operating systems is not guaranteed at this time.
+The integration of ExifTool into this program has been tested exclusively with the Windows executable on a Windows machine, using ExifTool version 13.04_64 (included in the tools folder of the repo). Compatibility with other operating systems has not been verified and is not guaranteed at this time.
 
 ---
 ## Installation and usage of the repository
@@ -29,35 +32,39 @@ Below are step-by-step instructions on how to install and set up the project usi
 
 ---
 ### Windows
-Clone the repository
-create and navigate to the directory where the repository will be saved.
+Create and navigate to the directory where the repository will be saved.
 ```bash
 mkdir %USERPROFILE%\Documents\GitHub && cd %USERPROFILE%\Documents\GitHub
 ```
 From here clone the repository
 ```bash
-git clone https://github.com/noord-hollandsarchief/image_compare.git
+git clone https://github.com/noord-hollandsarchief/image-compare.git
 ```
 
 ### Method 1
 Navigate to the project directory and install the dependencies.
 ```bash
-cd %USERPROFILE%\Documents\GitHub\image_compare\ && pip install -r requirements.txt
+cd %USERPROFILE%\Documents\GitHub\image-compare\ && pip install -r requirements.txt
 ```
 Navigate to the scripts directory and run main.py
 ```bash
-cd %USERPROFILE%\Documents\GitHub\image_compare\scripts && python main.py
+cd %USERPROFILE%\Documents\GitHub\image-compare\scripts && python main.py
 ```
 Follow the prompts:
 - Enter the directory of images to be analyzed.:
-- Enter the directory where ExifTool is installed:
-The pipeline will then start running
+
+Test directory included in this repo:
+```bash
+%USERPROFILE%\Documents\GitHub\image-compare\testImages\270
+```
+The pipeline will then start running.
+
 ---
 
 ### Method 2:
 Alternatively, the `setup.py` file can be run to install the required packages in either your current or a new environment. For this we have to navigate to the scripts directory and run setup.py
 ```bash
-cd %USERPROFILE%\Documents\GitHub\image_compare\scripts && python setup.py
+cd %USERPROFILE%\Documents\GitHub\image-compare\scripts && python setup.py
 ```
 
 Follow the prompts:
@@ -67,36 +74,48 @@ Follow the prompts:
   
 Activate the environment and run the main.py script:
 ```bash
-cd ..\ && .\yourenv\Scripts\activate && cd scripts && python main.py
+cd ..\ && .\yourenv\Scripts\activate
 ```
-Follow the prompts:
-- Enter the directory of images to be analyzed.:
-- Enter the directory where ExifTool is installed: 
+```bash
+cd scripts && python main.py
+```
+Follow the prompt:
+
+- Enter the directory of images to be analyzed:
+
+Test directory included in this repo:
+```bash
+%USERPROFILE%\Documents\GitHub\image-compare\testImages\270
+```
 The pipeline will then start running.
 
 ---
 ### macOS and Linux
-Clone the repository
-create and navigate to the directory where we want to save the repository.
+Create and navigate to the directory where the repository will be saved.
 ```bash
 mkdir ~Documents/GitHub && cd ~Documents/GitHub
 ```
 From here clone the repository.
 ```bash
-git clone https://github.com/noord-hollandsarchief/image_compare.git
+git clone https://github.com/noord-hollandsarchief/image-compare.git
 ```
 
 ### Method 1: 
 Navigate to the project directory and install the dependencies.
 ```bash
-cd ~/Documents/GitHub/image_compare/ && pip install -r requirements.txt
+cd ~/Documents/GitHub/image-compare/ && pip install -r requirements.txt
 ```
 Navigate to the scripts directory and run main.py
 ```bash
-cd ~/Documents/GitHub/image_compare/scripts && python main.py
+cd ~/Documents/GitHub/image-compare/scripts && python main.py
 ```
 Follow the prompts:
 - Enter the directory of images to be analyzed.:
+
+Test directory included in this repo:
+```bash
+~Documents/GitHub/image-compare/testImages/270
+```
 - Enter the directory where ExifTool is installed: 
 The analysis will then be done.
 ---
@@ -104,7 +123,7 @@ The analysis will then be done.
 ### Method 2:
 Alternatively, the `setup.py` file can be run to install the required packages in either your current or a new environment. For this we have to navigate to the scripts directory and run setup.py
 ```bash
-cd ~/Documents/GitHub/image_compare/scripts && python setup.py
+cd ~/Documents/GitHub/image-compare/scripts && python setup.py
 ```
 Follow the prompts:
 - It will ask you if you want to create a new environment or use the current one.
@@ -113,10 +132,18 @@ Follow the prompts:
 
 Activate the environment and run the main.py script:
 ```bash
-cd .. && source yourenv/bin/activate && cd scripts && python main.py
+cd .. && source yourenv/bin/activate
+```
+```bash
+cd scripts && python main.py
 ```
 Follow the prompts:
 - Enter the directory of images to be analyzed.:
+
+Test directory included in this repo:
+```bash
+~Documents/GitHub/image-compare/testImages/270
+```
 - Enter the directory where ExifTool is installed: 
 The analysis will then be done.
 ---
