@@ -1,6 +1,8 @@
 import os
 import subprocess
 import sys
+import platform
+import venv
 from utils import createPaths, ensureDirectoriesExist
 
 def createVirtualEnv(envName):
@@ -16,7 +18,7 @@ def createVirtualEnv(envName):
     currentPath = os.getcwd()
     relativeEnvPath = os.path.join(currentPath, '..', envName)
     envPath = os.path.abspath(relativeEnvPath)
-    subprocess.call([sys.executable, '-m', 'venv', envPath])
+    venv.create(envPath, with_pip=True)
     print(f"Virtual environment created in: {envPath}")
     return envPath
 
@@ -32,13 +34,11 @@ def installRequirements(paths, envPath=None):
     None
     """
     if envPath:
-        activateScript = os.path.join(envPath, 'Scripts', 'activate') if os.name == 'nt' else os.path.join(envPath, 'bin', 'activate')
-        command = f'"{activateScript}" && pip install -r "{paths["requirements"]}"'
-        subprocess.call(command, shell=True)
+        pythonExecutable = os.path.join(envPath, 'Scripts', 'python.exe') if os.name == 'nt' else os.path.join(envPath, 'bin', 'python')
+        print(f"Using Python executable: {pythonExecutable}")
+        subprocess.check_call([pythonExecutable, '-m', 'pip', 'install', '-r', paths["requirements"]])
     else:
-        command = f'pip install -r "{paths["requirements"]}"'
-        subprocess.call(command, shell=True)
-
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', paths["requirements"]])
 
 def getEnvInputs(paths):
     """
@@ -66,18 +66,22 @@ def getEnvInputs(paths):
             print('Invalid choice. Please enter "current" or "new".')
             envChoice = input("Do you want to install requirements in the current environment or a new virtual environment? (current/new): ").strip().lower()
 
-def getUserInputs():
+def getUserInputs(paths):
     """
-    This function prompts the user to enter the images directory and the directory where the ExifTool is installed.
+    This function prompts the user to enter the images directory and 
+    for non Windows users; the directory where the ExifTool is installed.
 
     Parameters:
     None
 
     Returns:
+    directory, exifToolPath (tuple): A tuple containing the images directory and the ExifTool path.
     """
-    
     directory = input('Enter the images directory: ')
-    exifToolPath = input('Enter the directory where the ExifTool is installed: ')
+    if platform.system() != 'Windows':
+        exifToolPath = input('Enter the directory where the ExifTool is installed: ')
+    else:
+        exifToolPath = paths['exifToolWindows']
 
     return directory, exifToolPath
 

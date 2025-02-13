@@ -141,9 +141,8 @@ def getImageHash(filePath, algorithm='average_hash'):
     Returns:
     list: A list of image hashes.
     """
-    # 
-    Image.MAX_IMAGE_PIXELS = None 
     
+    Image.MAX_IMAGE_PIXELS = None 
     # Dictionary of possible filehash functions.
     hashFuncs = {'average_hash': imagehash.average_hash,
                   'phash': imagehash.phash}
@@ -165,21 +164,21 @@ def getImageHash(filePath, algorithm='average_hash'):
 
 def getFileHash(filePaths, exifToolPath, algorithm='md5'):
     """
-    This function allows calculation of filehashes for exact duplicate checking.
+    This function allows calculation of file hashes for exact duplicate checking.
     It removes the metadata from the file and saves the stripped file
     to a temporary path before doing so.
     The supported hash algorithms are 'md5' and 'sha256'.
     
     Parameters:
-    filePaths (list): List of paths to the files to be hashed.
-    exifToolPath (str): Path to the ExifTool executable.
+    file_paths (list): List of paths to the files to be hashed.
+    exif_tool_path (str): Path to the ExifTool executable.
     algorithm (str): The name of the algorithm to be used (default='md5').
 
     Returns:
-    list: A list of filehashes.
+    list: A list of file hashes.
     """
     hashList = []
-    # Dictionary of possible filehash functions.
+    # Dictionary of possible file hash functions.
     hashFuncs = {'md5': hashlib.md5,
                   'sha256': hashlib.sha256}
     
@@ -188,48 +187,52 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
         raise ValueError(f"Unsupported algorithm: {algorithm}")
     
     # Calculate the hashes for each of the files in the list of paths.
-    for filePath in filePaths:
+    for file_path in filePaths:
         try:
             # Create a temporary file
-            with tempfile.NamedTemporaryFile() as tempFile:
-                tempPath = tempFile.name
+            temp_file = tempfile.NamedTemporaryFile(delete=False)
+            temp_path = temp_file.name
+            temp_file.close()
 
-            # The command to be used to run the locally installed exifTool. 
-            # Here the 
-            # See https://exiftool.org/exiftool_pod.html for the available arguments.
-            command = [exifToolPath, '-all=', '-overwrite_original', '-o', tempPath, filePath]
+            # Ensure the temp_path is deleted if it exists
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+            # The command to be used to run the locally installed ExifTool.
+            command = [exifToolPath, '-all=', '-o', temp_path, file_path]
             # Subprocess allows programs to run through the command-line-interface and capture its output
             process = subprocess.Popen(args=command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             _, error = process.communicate()
 
             # When the process fails, an exception is raised.
             if process.returncode != 0:
-                raise Exception(f"Exiftool Error {error.decode().strip()}")
+                raise Exception(f"ExifTool Error: {error.decode().strip()}")
 
             # From the dictionary of possible hash functions, the name of the hash function of the specified algorithm 
             # argument is obtained and used to calculate the hash of that specific function.
-            with open(tempPath, "rb") as f:
-                fileHash = hashFuncs.get(algorithm)(f.read()).hexdigest()
-                hashList.append(fileHash)
-                print(f"{algorithm} hash is {fileHash}")
+            with open(temp_path, "rb") as f:
+                file_hash = hashFuncs.get(algorithm)(f.read()).hexdigest()
+                hashList.append(file_hash)
+                print(f"{algorithm} hash is {file_hash}")
 
         # When the process fails we execute the following steps:
         except Exception as e:
             # Show the error message
-            errorMessage = f"Error processing {filePath}: {e}"
-            print(errorMessage)
-            # Add to hashList to match the length of the pandas DataFrame.
-            hashList.append(errorMessage)
+            error_message = f"Error processing {file_path}: {e}"
+            print(error_message)
+            # Add to hash_list to match the length of the pandas DataFrame.
+            hashList.append(error_message)
             continue
         
-        # To ensure the tempPath is always removed before the next iteration in the loop
+        # To ensure the temp_path is always removed before the next iteration in the loop
         # we put it in the finally block
         finally:
-            if os.path.exists(tempPath):
-                os.remove(tempPath)
-
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
     return hashList
+
+
 
 
 def getInitialHashData(allImageFilePaths, hashPath, exifToolPath):
@@ -439,6 +442,7 @@ def getInitialImageData(allImageFilePaths, exifToolPath, rawDataPath, processedD
     initialHashData = getInitialHashData(allImageFilePaths=allImageFilePaths,
                                          hashPath=hashPath, 
                                          exifToolPath=exifToolPath)
+    
     
     # The initial exifData (filePath, FileSize, Resolution)
     exifData = getExifData(allImageFilePaths=allImageFilePaths,

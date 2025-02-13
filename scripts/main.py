@@ -5,7 +5,7 @@ import setup
 
 def main():
     paths = utils.createPaths()
-    directory, exifToolPath = setup.getUserInputs()
+    directory, exifToolPath = setup.getUserInputs(paths)
 
 
     # List of paths to the image files to be analysed.
