@@ -1,0 +1,9 @@
+data/processed/exifData.csv
+*.csv
+*.pyc
+*.pyc
+scripts/__pycache__/setup.cpython-313.pyc
+scripts/__pycache__/imageCompare.cpython-313.pyc
+data/images.db
+scripts/__pycache__/utils.cpython-313.pyc
+scripts/__pycache__/setup.cpython-313.pyc
