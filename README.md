@@ -12,14 +12,15 @@ This repository contains code that can find exact duplicates in a directory of i
    - [macOS](#macos)
    - [Linux](#linux)
 - [Install ExifTool](#install-exiftool)
-- [Installation and usage of the repository](#installation-and-usage-of-the-repository)
    - [Windows](#windows-1)
+   - [macOS and Linux](#macos-and-linux)
+- [Installation and usage of the repository](#installation-and-usage-of-the-repository)
+   - [Windows](#windows-2)
    - [macOS and Linux](#macos-and-linux)
 - [Features](#features)
 ---
 ## Install Python
-1. **Download Python**:
-   Visit the official Python website.
+1. Visit the download page on the official Python [website](https://www.python.org/downloads/).
 2. Select the version of Python you wish to install (version 3.13.2 is highly recommended).
 3. Click on the download link for your operating system (Windows, macOS, or Linux).
 
