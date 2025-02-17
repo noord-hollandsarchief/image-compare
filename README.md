@@ -20,25 +20,25 @@ This repository contains code that can find exact duplicates in a directory of i
 - [Features](#features)
 ---
 ## Install Python
-1. Visit the download page on the official Python [website](https://www.python.org/downloads/).
+1. Visit the [download page](https://www.python.org/downloads/) on the official Python website.
 2. Select the version of Python you wish to install (version 3.13.2 is highly recommended).
 3. Click on the download link for your operating system (Windows, macOS, or Linux).
 
-**Note**: This project was developed using Python 3.13.2. It is not guaranteed to work with other versions of Python.
+**Note**: This project was developed using Python 3.13.2. Therefore it is not guaranteed to work with other versions of Python.
 
 ### Windows
-1. Run the downloaded installer.
-2. Make sure to check the box that says "Add Python to PATH".
-3. Click "Install Now" and follow the prompts.
+4. Run the downloaded installer.
+5. Make sure to check the box that says "Add Python to PATH".
+6. Click "Install Now" and follow the prompts.
 
 ### macOS
-1. Open the downloaded `.pkg` file.
-2. Follow the installation instructions.
-3. Verify the installation by opening Terminal and typing `python3 --version`.
+4. Open the downloaded `.pkg` file.
+5. Follow the installation instructions.
+6. Verify the installation by opening Terminal and typing `python3 --version`.
 
 ### Linux
-1. Open Terminal.
-2. Use the package manager to install Python. For example, on Ubuntu:
+4. Open Terminal.
+5. Use the package manager to install Python. For example, on Ubuntu:
    ```bash
    sudo apt update
    sudo apt install python3
@@ -48,13 +48,14 @@ This repository contains code that can find exact duplicates in a directory of i
 
 ## Install ExifTool 
 ### Windows
-For Windows users, the ExifTool executable is already prepared and included in the tools folder of this repository.
+For Windows users, the ExifTool executable is already prepared and ready to use. 
+The files are included in the tools folder of this repository.
 
 ### macOS and Linux
 1. **Download ExifTool**:
    Get the latest version of ExifTool by Phil Harvey from the official website: [ExifTool Download.](https://exiftool.org/)
 2. **Setting it up**:
-   Detailed installation instructions are available here:[ ExifTool Installation.](https://exiftool.org/install.html )
+   Detailed installation instructions are available here:[ ExifTool Installation.](https://exiftool.org/install.html)
    
 **Note**:
 The integration of ExifTool into this program has been tested exclusively with the Windows executable on a Windows machine, using ExifTool version 13.04_64 (included in the tools folder of the repo). Compatibility with other operating systems has not been verified and is not guaranteed at this time.
@@ -79,12 +80,12 @@ Using the command-line interface, navigate to the project directory and install 
 ```bash
 cd %USERPROFILE%\Documents\GitHub\image-compare\ && pip install -r requirements.txt
 ```
-Navigate to the scripts directory and run main.py
+Navigate to the scripts directory and run main.py.
 ```bash
 cd %USERPROFILE%\Documents\GitHub\image-compare\scripts && python main.py
 ```
 Follow the prompts:
-- Enter the directory of images to be analyzed.:
+- Enter the directory of images to be analyzed:
 
 Test directory included in this repo:
 ```bash
@@ -95,20 +96,20 @@ The pipeline will then start running.
 ---
 
 ### Method 2:
-Alternatively, the `setup.py` file can be run to install the required packages in either your current or a new environment. For this we have to 
-open the command-line interface, navigate to the scripts directory and run setup.py
-```bash
+Alternatively, the `setup.py` file can be run to install the required packages in either your current or a new virtual environment. For this we have to 
+open the command-line interface, navigate to the scripts directory and run setup.py.
+```bash.
 cd %USERPROFILE%\Documents\GitHub\image-compare\scripts && python setup.py
 ```
 
 Follow the prompts:
-- It will ask you if you want to create a new environment or use the current one.
+- It will ask you if you want to create a new virtual environment or use the current one.
 - If you create a new enviornment you have to specify a name.
 - Then it will install the packages listed in `requirements.txt` in this environment.
   
-Activate the environment and run the main.py script:
+Activate the virtual environment and run the main.py script:
 ```bash
-cd ..\ && .\yourenv\Scripts\activate
+cd ..\ && .\yourvenv\Scripts\activate
 ```
 ```bash
 cd scripts && python main.py
@@ -140,12 +141,12 @@ Using the command-line interface, navigate to the project directory and install 
 ```bash
 cd ~/Documents/GitHub/image-compare/ && pip install -r requirements.txt
 ```
-Navigate to the scripts directory and run main.py
+Navigate to the scripts directory and run main.py.
 ```bash
 cd ~/Documents/GitHub/image-compare/scripts && python main.py
 ```
 Follow the prompts:
-- Enter the directory of images to be analyzed.:
+- Enter the directory of images to be analyzed:
 
 Test directory included in this repo:
 ```bash
@@ -175,7 +176,7 @@ cd .. && source yourenv/bin/activate
 cd scripts && python main.py
 ```
 Follow the prompts:
-- Enter the directory of images to be analyzed.:
+- Enter the directory of images to be analyzed:
 
 Test directory included in this repo:
 ```bash
