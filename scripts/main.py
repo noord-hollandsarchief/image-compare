@@ -10,7 +10,6 @@ def main():
 
     # List of paths to the image files to be analysed.
     allImageFilePaths = imageCompare.getAllImageFilePaths(directory=directory)  
-    #allImageFilePaths = [p for p in allImageFilePaths if basePath + '270' in p]   
 
     utils.ensureDirectoriesExist(paths)
 
@@ -18,20 +17,21 @@ def main():
     imageCompare.makeTables(paths['tables'])
 
     ### Gathering the data ###
-    ##########################
-    namesData, initialHashData, exifData =\
+    ##########################pip 
+    namesData, descriptionData, initialHashData, exifData =\
     imageCompare.getInitialImageData(allImageFilePaths=allImageFilePaths,
                                      exifToolPath=exifToolPath,
                                      rawDataPath=paths['rawData'],
                                      processedDataPath=paths['processedData'])
 
-    # Filling initial data tables
+    # # Filling initial data tables
     imageCompare.fillTablesInitialData(exifData=exifData,
                                        namesData=namesData,
+                                       descriptionData=descriptionData,
                                        initialHashData=initialHashData,
                                        tablesPath=paths['tables'])
 
-    # Obtaining the exact duplicates
+    # # Obtaining the exact duplicates
     imageCompare.getExactDuplicates(tablesPath=paths['tables'],
                                     exifToolPath=exifToolPath,
                                     processedDataPath=paths['processedData'])
@@ -49,6 +49,6 @@ def main():
                                                 processedDataPath=paths['processedData'])
     imageCompare.mapSimilarImagesToConversionNames(tablesPath=paths['tables'],
                                                    processedDataPath=paths['processedData'])
-
+    imageCompare.mapImagesToDescription(tablesPath=paths['tables'])
 if __name__ == "__main__":
     main()

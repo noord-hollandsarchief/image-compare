@@ -4,12 +4,14 @@ import json
 import hashlib
 import tempfile
 import sqlite3
+import re
 
 import numpy as np
 import pandas as pd
 from PIL import Image
 from PIL.ExifTags import TAGS
 import imagehash
+
 
 
 def getAllImageFilePaths(directory):
@@ -126,6 +128,45 @@ def getConversionNames(maisFlexisRecords):
 
     return recordsDF
 
+def getDescriptionData(maisFlexisDescriptions):
+    """
+    This function reformats the associated record data extracted from MaisFlexis.  
+    It strips the file of the included html tags and transforms the fields.
+    'CODE', 'NUMMER' and 'CODE_1' are concatenated together to create a common field between 
+    the filepaths of the analyzed images and the maisFlexisRecords to allow coupling through a join.
+
+    Parameters:
+    maisFlexisDescriptions (str): The path to the file containing the MaisFlexis descriptions
+
+    Returns:
+    pandas DataFrame: The processed MaisFlexis descriptions. 
+    """
+    descriptionsDF = pd.read_csv(maisFlexisDescriptions, encoding='latin1')
+
+    patterns = ['<ZR><BCURS>', '<BCURS>', '<ECURS>', '<ZR>']
+    for pattern in patterns:
+        descriptionsDF['BESCHRIJVING'] = descriptionsDF['BESCHRIJVING'].str.replace(pattern, '', regex=True)
+
+
+    def toIntIfNumber(x):
+        try:
+            if re.match(r'^\d+\.?\d*$', str(x)):
+                return int(float(x))
+            else:
+                return None
+        except ValueError:
+            return None
+
+    # Apply the conversion
+    descriptionsDF['NUMMER'] = descriptionsDF['NUMMER'].apply(lambda x: toIntIfNumber(x) if pd.notna(x) else None)
+    descriptionsDF['CODE'] = descriptionsDF['CODE'].apply(lambda x: toIntIfNumber(x) if pd.notna(x) else None)
+    descriptionsDF['CODE_1'] = descriptionsDF['CODE_1'].apply(lambda x: toIntIfNumber(x) if pd.notna(x) else None)
+    
+    # Create 'codeAndNumber' with conditional concatenation logic
+    descriptionsDF['codeAndNumber'] = descriptionsDF.apply(lambda row: 
+    (str(row['CODE']) if pd.notna(row['CODE']) else '') + "\\" + 
+    (str(row['NUMMER']) if pd.notna(row['NUMMER']) else '') + 
+    (str(row['CODE_1']) if pd.notna(row['CODE_1']) else ''), axis=1)
 
 def getImageHash(filePath, algorithm='average_hash'):
     """
@@ -301,15 +342,30 @@ def makeTables(tablesPath):
 
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS conversionNames (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        unique_ID TEXT,
-        imageID INTEGER,
-        code INTEGER,
-        nummer INTEGER,
-        aanvraagnummer TEXT,
-        fotonummer TEXT,
-        nummering_conversie TEXT,
-        md5Hash TEXT NOT NULL,
+        ID INTEGER PRIMARY KEY AUTOINCREMENT,
+        CODE INTEGER,
+        NUMMER INTEGER,
+        AANVRAAGNUMMER TEXT,
+        FOTONUMMER TEXT,
+        NUMMERING_CONVERSIE TEXT,
+        md5Hash TEXT, 
+        FOREIGN KEY(md5Hash) REFERENCES initialHashes(md5Hash)
+        )
+    ''')
+
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS descriptionData (
+        ID INTEGER PRIMARY KEY AUTOINCREMENT,
+        CODE TEXT,
+        AET_ID TEXT,
+        NUMMER TEXT,
+        CODE_1 INTEGER,
+        BEGINJAAR INTEGER,
+        EINDJAAR INTEGER,
+        BESCHRIJVING TEXT,
+        DATERING TEXT,
+        NOTABENE TEXT,
+        md5Hash TEXT, 
         FOREIGN KEY(md5Hash) REFERENCES initialHashes(md5Hash)
         )
     ''')
@@ -433,11 +489,14 @@ def getInitialImageData(allImageFilePaths, exifToolPath, rawDataPath, processedD
     # Defining the paths to the generated data files.
     exifDataPath = os.path.join(processedDataPath, 'exifData.csv')
     maisFlexisRecords = os.path.join(rawDataPath, 'Data_beeldbank.xlsx')
+    maisFlexisDescriptions = os.path.join(rawDataPath, 'EB_DB_ZieOOK.csv')
     hashPath = os.path.join(processedDataPath, 'imagesHash.csv')
     
     # The parsed maisFlexisRecords.
     namesData = getConversionNames(maisFlexisRecords=maisFlexisRecords)
     
+    # The description data.
+    descriptionData = getDescriptionData(maisFlexisDescriptions=maisFlexisDescriptions)
     # The initial hash data (filePath, aHash, MD5)
     initialHashData = getInitialHashData(allImageFilePaths=allImageFilePaths,
                                          hashPath=hashPath, 
@@ -449,10 +508,10 @@ def getInitialImageData(allImageFilePaths, exifToolPath, rawDataPath, processedD
                            exifDataPath=exifDataPath,
                            exifToolPath=exifToolPath)
     
-    return namesData, initialHashData, exifData
+    return namesData,  descriptionData, initialHashData, exifData
 
 
-def fillTablesInitialData(exifData, namesData, initialHashData, tablesPath):
+def fillTablesInitialData(exifData, namesData,  descriptionData, initialHashData, tablesPath):
     """
     This function fills the tables created by the makeTables function 
     and fills them with the three pandas DataFrames returned by getInitialImageData.
@@ -466,7 +525,6 @@ def fillTablesInitialData(exifData, namesData, initialHashData, tablesPath):
     Returns:
     None
     """
-
     try:
         # Connecting to the database in tablesPath.
         connection = sqlite3.connect(database=tablesPath)
@@ -474,7 +532,9 @@ def fillTablesInitialData(exifData, namesData, initialHashData, tablesPath):
         exifData.to_sql('exifData', con=connection,
                        if_exists='replace', index=False)
         namesData.to_sql('conversionNames', con=connection, 
-                       if_exists='replace', index=False)
+                       if_exists='replace', index=False),
+        descriptionData.to_sql('descriptionData', con=connection,
+                               if_exists='replace', index=False)        
         initialHashData.to_sql('initialHashes', con=connection,
                              if_exists='replace', index=False)
         
@@ -943,3 +1003,5 @@ def mapSimilarImagesToConversionNames(tablesPath, processedDataPath):
     # Returning the concatenated DataFrame.
     return similarMappedToConversionDF
     
+def mapImagesToDescription(tablesPath):
+    pass
