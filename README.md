@@ -45,6 +45,51 @@ This repository contains code that can find exact duplicates in a directory of i
    ```
 
 ---
+## Install Git
+
+### Windows
+For Windows users, you can download and install Git using the following steps:
+1. **Download Git**:
+   Get the latest version of Git from the official website: [Git Download](https://git-scm.com/downloads).
+2. **Run the Installer**:
+   Run the downloaded installer and follow the prompts. It is recommended to choose the default options.
+3. **Verify Installation**:
+   Open Command Prompt and run:
+   ```cmd
+   git --version
+   ```
+
+### macOS
+1. **Install Homebrew** (if not already installed):
+   Open Terminal and run:
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+2. **Install Git** (Run the following command in Terminal:
+   ```bash
+   brew install git
+   ```
+
+4. **Verify Installation** To check if git is installed correctly, run the following command:
+   ```bash
+   git --version
+   ```
+
+### Linux
+For Linux users, you can install Git using your package manager. For example, on Ubuntu:
+
+1. **Update Package List**: Open Terminal and run:
+   ```bash
+   sudo apt-get update
+   ```
+2. **Install Git** Run:
+   ```bash
+   sudo apt-get install git
+   ```
+3. **Verify Installation** Run:
+   ```bash
+   git --version
+   ```
 
 ## Install ExifTool 
 ### Windows
@@ -55,7 +100,7 @@ The files are included in the tools folder of this repository.
 1. **Download ExifTool**:
    Get the latest version of ExifTool by Phil Harvey from the official website: [ExifTool Download.](https://exiftool.org/)
 2. **Setting it up**:
-   Detailed installation instructions are available here:[ ExifTool Installation.](https://exiftool.org/install.html)
+   Detailed installation instructions are available here: [ExifTool Installation.](https://exiftool.org/install.html)
    
 **Note**:
 The integration of ExifTool into this program has been tested exclusively with the Windows executable on a Windows machine, using ExifTool version 13.04_64 (included in the tools folder of the repo). Compatibility with other operating systems has not been verified and is not guaranteed at this time.
@@ -119,6 +164,7 @@ Follow the prompt:
 - Enter the directory of images to be analyzed:
 
 Test directory included in this repo:
+(This doesnt work yet, provide the exact path instead)
 ```bash
 %USERPROFILE%\Documents\GitHub\image-compare\testImages\270
 ```
