@@ -62,12 +62,13 @@ def getExifData(allImageFilePaths, exifDataPath, exifToolPath):
     pandas.DataFrame: DataFrame containing the extracted Exif data.
     """
 
-    # Initialize the exifData DataFrame
-    exifData = pd.DataFrame({'filePath': allImageFilePaths})
-
     # Specifying the fields to extract 
     relevantFields = ["FileSize", "XResolution", "YResolution"]
-    
+   
+    # Initialize the exifData DataFrame
+    exifDataColumns = ['filePath'] + relevantFields
+    exifData = pd.DataFrame(columns=exifDataColumns)
+ 
     # Obtain the Exif metadata from each of the files in the list of paths.
     for filePath in allImageFilePaths:
         command = [exifToolPath, '-json', filePath]
@@ -75,18 +76,22 @@ def getExifData(allImageFilePaths, exifDataPath, exifToolPath):
             # Subprocess allows programs to run through the command-line-interface and capture its output
             # Has to be optimized so only the relevant fields are extracted by the exifTool itself.
             result = subprocess.run(command, capture_output=True, text=True)
-            
+           
             # Parse the JSON output.
             json_result = json.loads(result.stdout)[0]
-
+            #print(json_result)
             # Adding the relevant fields to the exifData DataFrame.
-            exifData = pd.concat([exifData, pd.DataFrame({k: [v]
-                                  for k, v in json_result.items() if k in relevantFields})])
-        
+            # exifData = pd.concat([exifData, pd.DataFrame({k: [v]
+            #                       for k, v in json_result.items() if k in relevantFields})])
+            exifData = pd.concat([exifData, pd.DataFrame({k: [v] for k, v in json_result.items() if k in relevantFields})])
+
         # When the process fails we print an error messagege               
         except Exception as e:
             print(f"Error processing {filePath}: {e}")
-    
+
+    exifData['filePath'] = allImageFilePaths
+
+    print(exifData)
     # Saving the exifData DataFrame to a CSV file.
     exifData.to_csv(exifDataPath, index=False)
 
@@ -228,19 +233,19 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
         raise ValueError(f"Unsupported algorithm: {algorithm}")
     
     # Calculate the hashes for each of the files in the list of paths.
-    for file_path in filePaths:
+    for filePath in filePaths:
         try:
             # Create a temporary file
-            temp_file = tempfile.NamedTemporaryFile(delete=False)
-            temp_path = temp_file.name
-            temp_file.close()
+            tempFile = tempfile.NamedTemporaryFile(delete=False)
+            tempPath = tempFile.name
+            tempFile.close()
 
-            # Ensure the temp_path is deleted if it exists
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            # Ensure the tempPath is deleted if it exists
+            if os.path.exists(tempPath):
+                os.remove(tempPath)
 
             # The command to be used to run the locally installed ExifTool.
-            command = [exifToolPath, '-all=', '-o', temp_path, file_path]
+            command = [exifToolPath, '-all=', '-o', tempPath, filePath]
             # Subprocess allows programs to run through the command-line-interface and capture its output
             process = subprocess.Popen(args=command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             _, error = process.communicate()
@@ -251,7 +256,7 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
 
             # From the dictionary of possible hash functions, the name of the hash function of the specified algorithm 
             # argument is obtained and used to calculate the hash of that specific function.
-            with open(temp_path, "rb") as f:
+            with open(tempPath, "rb") as f:
                 file_hash = hashFuncs.get(algorithm)(f.read()).hexdigest()
                 hashList.append(file_hash)
                 print(f"{algorithm} hash is {file_hash}")
@@ -259,17 +264,17 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
         # When the process fails we execute the following steps:
         except Exception as e:
             # Show the error message
-            error_message = f"Error processing {file_path}: {e}"
-            print(error_message)
+            errorMessage = f"Error processing {filePath}: {e}"
+            print(errorMessage)
             # Add to hash_list to match the length of the pandas DataFrame.
-            hashList.append(error_message)
+            hashList.append(errorMessage)
             continue
         
-        # To ensure the temp_path is always removed before the next iteration in the loop
+        # To ensure the tempPath is always removed before the next iteration in the loop
         # we put it in the finally block
         finally:
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            if os.path.exists(tempPath):
+                os.remove(tempPath)
 
     return hashList
 
@@ -533,8 +538,8 @@ def fillTablesInitialData(exifData, namesData,  descriptionData, initialHashData
                        if_exists='replace', index=False)
         namesData.to_sql('conversionNames', con=connection, 
                        if_exists='replace', index=False),
-        descriptionData.to_sql('descriptionData', con=connection,
-                               if_exists='replace', index=False)        
+        #descriptionData.to_sql('descriptionData', con=connection,
+        #                       if_exists='replace', index=False)        
         initialHashData.to_sql('initialHashes', con=connection,
                              if_exists='replace', index=False)
         
@@ -766,6 +771,19 @@ def mapDuplicatesToConversionNames(tablesPath, processedDataPath):
     duplicatesMappedToConversionDF =\
     pd.concat([duplicatenConversieGekoppeld, duplicatenConversieOngekoppeld])
 
+    duplicatesMappedToConversionDF.to_sql('duplicatesMappedToConversion', con=connection,
+                               if_exists='replace', index=False)
+
+    if not duplicatesMappedToConversionDF.empty:
+        # Split the 'codeAndNumber' column into two columns 'code' and 'number'
+        splitColumns = duplicatesMappedToConversionDF['codeAndNumber'].str.split('\\', expand=True)
+
+        # Ensure there are exactly two columns by filling any missing values
+        splitColumns = splitColumns.fillna('')
+
+        # Assign the split columns to 'code' and 'number'
+        duplicatesMappedToConversionDF[['code', 'number']] = splitColumns
+
     duplicatesMappedToConversionDF.to_csv(os.path.join(processedDataPath, 'duplicatesMappedToConversion.csv'), index=False)
 
     # Closing the database connection.
@@ -823,7 +841,7 @@ def getSimilarImages(tablesPath, processedDataPath):
 
     # Reading the table into a pandas DataFrame.
     pHashSimilarImagesDF = pd.read_sql("SELECT * FROM similarImages", connection)
-
+    
     # Saving the tables as CSV.
     pHashSimilarImagesDF =\
     pHashSimilarImagesDF.to_csv(os.path.join(processedDataPath, 'similarImages.csv'), index=False)
@@ -995,6 +1013,17 @@ def mapSimilarImagesToConversionNames(tablesPath, processedDataPath):
 
     similarMappedToConversionDF.to_sql('similarImagesMappedToConversion', con=connection,
                                if_exists='replace', index=False)
+    
+    if not similarMappedToConversionDF.empty:
+        # Split the 'codeAndNumber' column into two columns 'code' and 'number'
+        splitColumns = similarMappedToConversionDF['codeAndNumber'].str.split('\\', expand=True)
+
+        # Ensure there are exactly two columns by filling any missing values
+        splitColumns = splitColumns.fillna('')
+
+        # Assign the split columns to 'code' and 'number'
+        similarMappedToConversionDF[['code', 'number']] = splitColumns
+
     similarMappedToConversionDF.to_csv(os.path.join(processedDataPath, 'similarMappedToConversion.csv'), index=False)
 
     # Closing the connection.

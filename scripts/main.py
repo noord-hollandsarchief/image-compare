@@ -50,5 +50,6 @@ def main():
     imageCompare.mapSimilarImagesToConversionNames(tablesPath=paths['tables'],
                                                    processedDataPath=paths['processedData'])
     imageCompare.mapImagesToDescription(tablesPath=paths['tables'])
+    
 if __name__ == "__main__":
     main()
