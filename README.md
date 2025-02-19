@@ -138,7 +138,7 @@ Follow the prompts:
 
 Test directory included in this repo:
 ```bash
-%USERPROFILE%\Documents\GitHub\image-compare\testImages\270
+..\testImages\270
 ```
 The pipeline will then start running.
 
@@ -168,9 +168,8 @@ Follow the prompt:
 - Enter the directory of images to be analyzed:
 
 Test directory included in this repo:
-(This doesnt work yet, provide the exact path instead)
 ```bash
-%USERPROFILE%\Documents\GitHub\image-compare\testImages\270
+..\testImages\270
 ```
 The pipeline will then start running.
 
@@ -200,7 +199,7 @@ Follow the prompts:
 
 Test directory included in this repo:
 ```bash
-~Documents/GitHub/image-compare/testImages/270
+../testImages/270
 ```
 - Enter the directory where ExifTool is installed:
   
@@ -230,7 +229,7 @@ Follow the prompts:
 
 Test directory included in this repo:
 ```bash
-~Documents/GitHub/image-compare/testImages/270
+../testImages/270
 ```
 - Enter the directory where ExifTool is installed: 
 
