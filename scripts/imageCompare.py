@@ -11,7 +11,7 @@ import pandas as pd
 from PIL import Image
 from PIL.ExifTags import TAGS
 import imagehash
-
+import tqdm
 
 
 def getAllImageFilePaths(directory):
@@ -67,38 +67,35 @@ def getExifData(allImageFilePaths, exifDataPath, exifToolPath):
    
     # Initialize the exifData DataFrame
     exifDataColumns = ['filePath'] + relevantFields
-    exifData = pd.DataFrame(columns=exifDataColumns)
- 
+    exifData = pd.DataFrame(columns=exifDataColumns, index=range(len(allImageFilePaths)))
+
     # Obtain the Exif metadata from each of the files in the list of paths.
-    for filePath in allImageFilePaths:
-        command = [exifToolPath, '-json', filePath]
+    for i in tqdm.tqdm(range(len(allImageFilePaths)), desc='Extracting exif metadata', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+    ncols=80, 
+    ascii=" ░▒▓█"):
+        command = [exifToolPath, '-json', allImageFilePaths[i]]
         try:
             # Subprocess allows programs to run through the command-line-interface and capture its output
             # Has to be optimized so only the relevant fields are extracted by the exifTool itself.
             result = subprocess.run(command, capture_output=True, text=True)
            
             # Parse the JSON output.
-            json_result = json.loads(result.stdout)[0]
-            #print(json_result)
-            # Adding the relevant fields to the exifData DataFrame.
-            # exifData = pd.concat([exifData, pd.DataFrame({k: [v]
-            #                       for k, v in json_result.items() if k in relevantFields})])
-            exifData = pd.concat([exifData, pd.DataFrame({k: [v] for k, v in json_result.items() if k in relevantFields})])
-
+            jsonResult = json.loads(result.stdout)[0]
+            extractedData = {k: v for k, v in jsonResult.items() if k in relevantFields}
+            extractedData['filePath'] = allImageFilePaths[i]
+            for key, value in extractedData.items():
+                exifData.loc[i, key] = value
         # When the process fails we print an error messagege               
         except Exception as e:
-            print(f"Error processing {filePath}: {e}")
+            print(f"Error processing {allImageFilePaths[i]}: {e}")
 
-    exifData['filePath'] = allImageFilePaths
-
-    print(exifData)
-    # Saving the exifData DataFrame to a CSV file.
+    # Saving the exifData DataFrame to a CSV file.\
     exifData.to_csv(exifDataPath, index=False)
 
     return exifData
 
 
-def getConversionNames(maisFlexisRecords):
+def getConversionNames(maisFlexisRecords, tablesPath):
     """
     This function reformats the associated record data extracted from MaisFlexis.  
     It strips the file of the included html tags and transforms the fields.
@@ -111,29 +108,52 @@ def getConversionNames(maisFlexisRecords):
     Returns:
     pandas DataFrame: The processed MaisFlexis records. 
     """
-    
+
+    connection = sqlite3.connect(database=tablesPath)
+
+    # Initialize tqdm progress bar for the transformation process
+    tqdm.tqdm.pandas(desc=f'Parsing MaisFlexis records', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+    ncols=80, 
+    ascii=" ░▒▓█")
     # Reading the raw records data file into a pandas DataFrame
     recordsDF = pd.read_excel(maisFlexisRecords)
     
-    # Stripping the html tags and transforming the fields.
-    recordsDF[['AANVRAAGNUMMER', 'FOTONUMMER', 'NUMMERING_CONVERSIE']] =\
-    recordsDF[['AANVRAAGNUMMER', 'FOTONUMMER', 'NUMMERING_CONVERSIE']].apply(lambda x: x.str.split('<b>')
-                                                                           if '<b>' in x else x.str.split('<br>'))
-    recordsDF[['AANVRAAGNUMMER', 'FOTONUMMER', 'NUMMERING_CONVERSIE']] = \
-    recordsDF[['AANVRAAGNUMMER', 'FOTONUMMER', 'NUMMERING_CONVERSIE']].map(lambda x: ','.join(x) if isinstance(x, list) else x)
+    # Stripping the HTML tags and transforming the fields
+    def stripAndTransform(x):
+        if isinstance(x, str):
+            if '<b>' in x:
+                return ','.join(x.split('<b>'))
+            elif '<br>' in x:
+                return ','.join(x.split('<br>'))
+        return x
+    
+    
+    # Apply the transformation with a single progress bar
+    # Replacing applymap with progress_apply for better performance
+    transformed = recordsDF[['AANVRAAGNUMMER', 'FOTONUMMER', 'NUMMERING_CONVERSIE']].progress_apply(stripAndTransform)
+    
+    # Assign the transformed columns back to the original DataFrame
+    recordsDF[['AANVRAAGNUMMER', 'FOTONUMMER', 'NUMMERING_CONVERSIE']] = transformed
     
     # 'CODE', 'NUMMER' and 'CODE_1' are concatenated together
     # Dropping the empty values in 'NUMMER' beforehand to ensure correct concatenation.
     recordsDF = recordsDF.dropna(subset=['NUMMER'])
     recordsDF['NUMMER'] = recordsDF['NUMMER'].astype(int)
     
-    recordsDF['codeAndNumber'] =\
-    (recordsDF['CODE'].astype(str) + "\\" + recordsDF['NUMMER'].astype(str) + 
-    np.where(recordsDF['CODE_1'].fillna('') != '', recordsDF['CODE_1'].astype(str), ''))
+    recordsDF['codeAndNumber'] = (
+        recordsDF['CODE'].astype(str) + "\\" + 
+        recordsDF['NUMMER'].astype(str) + 
+        np.where(recordsDF['CODE_1'].fillna('') != '', recordsDF['CODE_1'].astype(str), '')
+    )
+    
+    recordsDF.to_sql('conversionNames', con=connection, 
+                       if_exists='replace', index=False)
+    
+    connection.close()
 
     return recordsDF
 
-def getDescriptionData(maisFlexisDescriptions):
+def getDescriptionData(maisFlexisDescriptions, tablesPath):
     """
     This function reformats the associated record data extracted from MaisFlexis.  
     It strips the file of the included html tags and transforms the fields.
@@ -146,7 +166,10 @@ def getDescriptionData(maisFlexisDescriptions):
     Returns:
     pandas DataFrame: The processed MaisFlexis descriptions. 
     """
-    descriptionsDF = pd.read_csv(maisFlexisDescriptions, encoding='latin1')
+
+    #connection = sqlite3.connect(database=tablesPath)
+    # The description data.
+    descriptionsDF = pd.read_csv(maisFlexisDescriptions, encoding='utf-8', on_bad_lines='skip')
 
     patterns = ['<ZR><BCURS>', '<BCURS>', '<ECURS>', '<ZR>']
     for pattern in patterns:
@@ -173,6 +196,10 @@ def getDescriptionData(maisFlexisDescriptions):
     (str(row['NUMMER']) if pd.notna(row['NUMMER']) else '') + 
     (str(row['CODE_1']) if pd.notna(row['CODE_1']) else ''), axis=1)
 
+    #descriptionData.to_sql('descriptionData', con=connection,
+    #                       if_exists='replace', index=False)      
+
+    #connection.close()
 def getImageHash(filePath, algorithm='average_hash'):
     """
     This function allows calculation of imagehashes.
@@ -201,7 +228,7 @@ def getImageHash(filePath, algorithm='average_hash'):
     try:
         img = Image.open(filePath)
         imageHash = str(hashFuncs.get(algorithm)(img))
-        print(f'{algorithm} is: {imageHash}')
+        #print(f'{algorithm} is: {imageHash}')
         return imageHash
     # If it fails, an error message is printed.
     except Exception as e:
@@ -233,7 +260,9 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
         raise ValueError(f"Unsupported algorithm: {algorithm}")
     
     # Calculate the hashes for each of the files in the list of paths.
-    for filePath in filePaths:
+    for filePath in tqdm.tqdm(filePaths, desc=f'Calculating {algorithm} hashes', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+    ncols=80, 
+    ascii=" ░▒▓█"):
         try:
             # Create a temporary file
             tempFile = tempfile.NamedTemporaryFile(delete=False)
@@ -259,7 +288,7 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
             with open(tempPath, "rb") as f:
                 file_hash = hashFuncs.get(algorithm)(f.read()).hexdigest()
                 hashList.append(file_hash)
-                print(f"{algorithm} hash is {file_hash}")
+                #print(f"{algorithm} hash is {file_hash}")
 
         # When the process fails we execute the following steps:
         except Exception as e:
@@ -300,7 +329,10 @@ def getInitialHashData(allImageFilePaths, hashPath, exifToolPath):
     
     # Assigning the values to the pandas DataFrame as lists.
     hashData['md5Hash'] = getFileHash(allImageFilePaths, exifToolPath, algorithm='md5')
-    hashData['aHash'] = [getImageHash(p, algorithm='average_hash') for p in allImageFilePaths]
+    algorithm='average_hash'
+    hashData['aHash'] = [getImageHash(p, algorithm='average_hash') for p in tqdm.tqdm(allImageFilePaths, desc=f'Calculating {algorithm} hashes', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+    ncols=80, 
+    ascii=" ░▒▓█")]
     hashData['filePath'] = allImageFilePaths
 
     # Saving the pandas DataFrame as CSV file.
@@ -473,7 +505,7 @@ def getUniqueColorsTable(tablesPath, processedDataPath):
     uniqueColorsDF.to_csv(os.path.join(processedDataPath, 'uniqueColors.csv'), index=False)
 
 
-def getInitialImageData(allImageFilePaths, exifToolPath, rawDataPath, processedDataPath):
+def getInitialImageData(allImageFilePaths, exifToolPath, hashPath, exifDataPath):
     """
     This function gathers initial hashes (md5Hash, aHash) and assigns these
     together with the image filepaths to the hashData dataframe. 
@@ -491,32 +523,22 @@ def getInitialImageData(allImageFilePaths, exifToolPath, rawDataPath, processedD
     A pandas DataFrame with the extracted Exif data.
     """
 
-    # Defining the paths to the generated data files.
-    exifDataPath = os.path.join(processedDataPath, 'exifData.csv')
-    maisFlexisRecords = os.path.join(rawDataPath, 'Data_beeldbank.xlsx')
-    maisFlexisDescriptions = os.path.join(rawDataPath, 'EB_DB_ZieOOK.csv')
-    hashPath = os.path.join(processedDataPath, 'imagesHash.csv')
-    
-    # The parsed maisFlexisRecords.
-    namesData = getConversionNames(maisFlexisRecords=maisFlexisRecords)
-    
-    # The description data.
-    descriptionData = getDescriptionData(maisFlexisDescriptions=maisFlexisDescriptions)
+    print('##################### Obtaining initial image data #####################')
+    print('|--------------------------------------------------------------------|')
     # The initial hash data (filePath, aHash, MD5)
     initialHashData = getInitialHashData(allImageFilePaths=allImageFilePaths,
                                          hashPath=hashPath, 
                                          exifToolPath=exifToolPath)
     
-    
     # The initial exifData (filePath, FileSize, Resolution)
     exifData = getExifData(allImageFilePaths=allImageFilePaths,
                            exifDataPath=exifDataPath,
                            exifToolPath=exifToolPath)
-    
-    return namesData,  descriptionData, initialHashData, exifData
+       
+    return initialHashData, exifData
 
 
-def fillTablesInitialData(exifData, namesData,  descriptionData, initialHashData, tablesPath):
+def fillTablesInitialData(exifData, initialHashData, tablesPath):
     """
     This function fills the tables created by the makeTables function 
     and fills them with the three pandas DataFrames returned by getInitialImageData.
@@ -534,15 +556,14 @@ def fillTablesInitialData(exifData, namesData,  descriptionData, initialHashData
         # Connecting to the database in tablesPath.
         connection = sqlite3.connect(database=tablesPath)
         # Inserting the data from the DataFrame into the SQLite tables.
+
+        print('Filling tables..')
+
         exifData.to_sql('exifData', con=connection,
-                       if_exists='replace', index=False)
-        namesData.to_sql('conversionNames', con=connection, 
-                       if_exists='replace', index=False),
-        #descriptionData.to_sql('descriptionData', con=connection,
-        #                       if_exists='replace', index=False)        
+                       if_exists='replace', index=False)  
         initialHashData.to_sql('initialHashes', con=connection,
                              if_exists='replace', index=False)
-        
+
     except sqlite3.Error as error:
         print("Failed to insert Python variable into sqlite table", error)
     # Closing the connection with the database when done.
@@ -623,7 +644,8 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
   )
   ORDER BY aHash, md5Hash;
   """
-
+  print('#################### Obtaining exact duplicates ####################')
+  print('|--------------------------------------------------------------------|')
   # Executing the above queries and loading the results into DataFrames.
   aHashAndMD5 = pd.read_sql(queryMD5andImageHash,
                             con=connection)
@@ -633,12 +655,15 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
                                con=connection)
   
   # Calculating the additional hashes.
+  print('Calculating additional hashes')
   noAHashAndMD5['sha256Hash'] = getFileHash(noAHashAndMD5['filePath'].tolist(),
                                             exifToolPath, 
                                             algorithm='sha256')
-  
+  algorithm = 'pHash'
   aHashAndNotMD5['pHash'] = [getImageHash(p, algorithm='phash') 
-                             for p in aHashAndNotMD5['filePath'].tolist()]
+                             for p in tqdm.tqdm(aHashAndNotMD5['filePath'].tolist(), desc=f'Calculating {algorithm} hashes', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+    ncols=80, 
+    ascii=" ░▒▓█")]
   
   # Combining results into a single DataFrame.
   finalHashesDF = pd.concat([aHashAndMD5,
@@ -717,7 +742,7 @@ def mapDuplicatesToConversionNames(tablesPath, processedDataPath):
     # Connecting to the database in tablesPath.
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
-
+    print('Mapping exact duplicates to MaisFlexis records')
     # Reading the exactDuplicates table as a pandas DataFrame.
     exactDuplicates = pd.read_sql("SELECT * FROM exactDuplicates", con=connection)
     
@@ -809,6 +834,9 @@ def getSimilarImages(tablesPath, processedDataPath):
     # Connecting to the database in tablesPath.
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
+
+    print('#################### Obtaining similar images ####################')
+    print('|-----------------------------------------------------------------|')
 
     # Query to select images with duplicate aHash and images with duplicate pHash.
     querySimilarImages = """
@@ -944,6 +972,9 @@ def mapSimilarImagesToConversionNames(tablesPath, processedDataPath):
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
 
+    print('############## Performing mapping to MaisFlexis records ##############')
+    print('|--------------------------------------------------------------------|')
+    print('Mapping similar images to MaisFlexis records')
     # Reading the similarImagesRanked table as a pandas DataFrame.
     similarImagesRanked = pd.read_sql("SELECT * FROM similarImagesRanked", con=connection)
 
@@ -1032,5 +1063,11 @@ def mapSimilarImagesToConversionNames(tablesPath, processedDataPath):
     # Returning the concatenated DataFrame.
     return similarMappedToConversionDF
     
-def mapImagesToDescription(tablesPath):
+def mapImagesToDescription(maisFlexisDescriptions, tablesPath):
+    print('##########################    Finished!    ###########################')
+    print('|--------------------------------------------------------------------|')
     pass
+
+
+
+        
