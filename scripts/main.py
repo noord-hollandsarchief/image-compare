@@ -4,11 +4,15 @@ import utils
 import setup
 
 def main():
+    
+    art = utils.asciiArt()
+    print(art['logo'], art['title'])
+    
     folderPaths, filePaths = utils.createPaths()
-    print()
     directory, exifToolPath = setup.getUserInputs(folderPaths)
-
-
+    print("""Setting up the paths and tables..
+          """)
+ 
     # List of paths to the image files to be analysed.
     allImageFilePaths = imageCompare.getAllImageFilePaths(directory=directory)  
 
@@ -18,19 +22,19 @@ def main():
     imageCompare.makeTables(filePaths['tables'])
 
     ### Gathering the data ###
-    ##########################pip 
+    ##########################
     initialHashData, exifData =\
     imageCompare.getInitialImageData(allImageFilePaths=allImageFilePaths,
                                      exifToolPath=exifToolPath,
                                      hashPath = filePaths['hashPath'],
                                      exifDataPath = filePaths['exifData'])
 
-    # # Filling initial data tables
+    # Filling initial data tables
     imageCompare.fillTablesInitialData(exifData=exifData,
                                        initialHashData=initialHashData,
                                        tablesPath=filePaths['tables'])
-
-    # # Obtaining the exact duplicates
+    
+    # Obtaining the exact duplicates
     imageCompare.getExactDuplicates(tablesPath=filePaths['tables'],
                                     exifToolPath=exifToolPath,
                                     processedDataPath=folderPaths['processedData'])
@@ -49,13 +53,14 @@ def main():
     imageCompare.getConversionNames(maisFlexisRecords=filePaths['maisFlexisRecords'],
                                     tablesPath=filePaths['tables'])
 
-    #imageCompare.getDescriptionData(maisFlexisDescriptions=filePaths['maisFlexisRecords'],
-    #                                tablesPath=filePaths['tables']) 
-
     imageCompare.mapDuplicatesToConversionNames(tablesPath=filePaths['tables'], 
+                                                rawDataRecords=filePaths['rawDataRecords'],
+                                                exactDuplicates=filePaths['exactDuplicates'],
                                                 processedDataPath=folderPaths['processedData'])
     
-    imageCompare.mapSimilarImagesToConversionNames(tablesPath=filePaths['tables'],
+    imageCompare.mapSimilarImagesToConversionNames(tablesPath=filePaths['tables'], 
+                                                   rawDataRecords=filePaths['rawDataRecords'],
+                                                   similarImages=filePaths['similarImages'],
                                                    processedDataPath=folderPaths['processedData'])
     
     imageCompare.mapImagesToDescription(maisFlexisDescriptions=filePaths['maisFlexisRecords'],

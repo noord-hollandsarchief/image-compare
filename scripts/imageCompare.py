@@ -31,10 +31,11 @@ def getAllImageFilePaths(directory):
     """
     allFilePaths = []
     
-    # Collecting all the file paths in the specified directory (archive) 
+    # Collecting all the file paths in the specified directory (root_directory)
     for root, _, files in os.walk(directory):
         for file in files:
-            allFilePaths.append(os.path.join(root, file))
+            fullPath = os.path.join(root, file)
+            allFilePaths.append(fullPath)
     
     # Assume the file extensions of images are of length 3 (e.g., jpg, png).
     imageExtensions = list(set([p.split('.')[-1] 
@@ -167,14 +168,13 @@ def getDescriptionData(maisFlexisDescriptions, tablesPath):
     pandas DataFrame: The processed MaisFlexis descriptions. 
     """
 
-    #connection = sqlite3.connect(database=tablesPath)
+    connection = sqlite3.connect(database=tablesPath)
     # The description data.
     descriptionsDF = pd.read_csv(maisFlexisDescriptions, encoding='utf-8', on_bad_lines='skip')
 
     patterns = ['<ZR><BCURS>', '<BCURS>', '<ECURS>', '<ZR>']
     for pattern in patterns:
         descriptionsDF['BESCHRIJVING'] = descriptionsDF['BESCHRIJVING'].str.replace(pattern, '', regex=True)
-
 
     def toIntIfNumber(x):
         try:
@@ -196,10 +196,12 @@ def getDescriptionData(maisFlexisDescriptions, tablesPath):
     (str(row['NUMMER']) if pd.notna(row['NUMMER']) else '') + 
     (str(row['CODE_1']) if pd.notna(row['CODE_1']) else ''), axis=1)
 
-    #descriptionData.to_sql('descriptionData', con=connection,
-    #                       if_exists='replace', index=False)      
+    descriptionsDF.to_sql('descriptionData', con=connection,
+                          if_exists='replace', index=False)      
 
-    #connection.close()
+    connection.close()
+
+
 def getImageHash(filePath, algorithm='average_hash'):
     """
     This function allows calculation of imagehashes.
@@ -306,8 +308,6 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
                 os.remove(tempPath)
 
     return hashList
-
-
 
 
 def getInitialHashData(allImageFilePaths, hashPath, exifToolPath):
@@ -523,7 +523,7 @@ def getInitialImageData(allImageFilePaths, exifToolPath, hashPath, exifDataPath)
     A pandas DataFrame with the extracted Exif data.
     """
 
-    print('##################### Obtaining initial image data #####################')
+    print('################### Obtaining initial image data ###################')
     print('|--------------------------------------------------------------------|')
     # The initial hash data (filePath, aHash, MD5)
     initialHashData = getInitialHashData(allImageFilePaths=allImageFilePaths,
@@ -644,8 +644,9 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
   )
   ORDER BY aHash, md5Hash;
   """
-  print('#################### Obtaining exact duplicates ####################')
-  print('|--------------------------------------------------------------------|')
+  print('################### Obtaining exact duplicates ####################')
+  print('|-----------------------------------------------------------------|')
+
   # Executing the above queries and loading the results into DataFrames.
   aHashAndMD5 = pd.read_sql(queryMD5andImageHash,
                             con=connection)
@@ -661,7 +662,9 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
                                             algorithm='sha256')
   algorithm = 'pHash'
   aHashAndNotMD5['pHash'] = [getImageHash(p, algorithm='phash') 
-                             for p in tqdm.tqdm(aHashAndNotMD5['filePath'].tolist(), desc=f'Calculating {algorithm} hashes', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+                             for p in tqdm.tqdm(aHashAndNotMD5['filePath'].tolist(),
+                             desc=f'Calculating {algorithm} hashes', 
+                             bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
     ncols=80, 
     ascii=" ░▒▓█")]
   
@@ -718,12 +721,13 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
 
   # Saving the final DataFrame to CSV.
   exactDuplicatesDF = pd.read_sql("SELECT * FROM exactDuplicates", con=connection)
-  exactDuplicatesDF = exactDuplicatesDF.to_csv(os.path.join(processedDataPath, 'exactDuplicates.csv'), index=False)
+  exactDuplicatesDF =\
+  exactDuplicatesDF.to_csv(os.path.join(processedDataPath, 'exactDuplicates.csv'), index=False)
 
   connection.close()
 
 
-def mapDuplicatesToConversionNames(tablesPath, processedDataPath):
+def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, processedDataPath):
     """
     This function categorizes the exact duplicates as 'gekoppeld' or 'ongekoppeld', 
     extracts the code and number from the filePath of 'gekoppeld', combines it into a new
@@ -739,83 +743,66 @@ def mapDuplicatesToConversionNames(tablesPath, processedDataPath):
     Returns:
     pandas.DataFrame: DataFrame containing the mapped duplicates and their conversion names.
     """
+
     # Connecting to the database in tablesPath.
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
-    print('Mapping exact duplicates to MaisFlexis records')
-    # Reading the exactDuplicates table as a pandas DataFrame.
-    exactDuplicates = pd.read_sql("SELECT * FROM exactDuplicates", con=connection)
     
-    # Adding a new column 'koppelingStatus' and setting its default value to 'gekoppeld'.
-    exactDuplicates['koppelingStatus'] = 'gekoppeld'
+    # Reading the dataRecords and exactDuplicatesDF
+    rawDataRecordsDF = pd.read_csv(rawDataRecords, low_memory=False)
+    exactDuplicatesDF = pd.read_csv(exactDuplicates)
+        
+    # Transformation on filePath to obtain common unique column values 
+    exactDuplicatesDF['Bestandsnaam'] =\
+    exactDuplicatesDF['filePath'].str.split('\\').str.get(-1)
 
-    # Update 'koppelingStatus' to 'ongekoppeld' for rows where 'filePath' contains '_OGK' or '_OGKB'.
-    exactDuplicates.loc[exactDuplicates['filePath'].str.contains('_OGK|_OGKB'), 'koppelingStatus'] = 'ongekoppeld'
+    # Saving the records data as an sql table 
+    exactDuplicatesDF.to_sql(name='exactDuplicates',
+                             con=connection,
+                             if_exists='replace',
+                             index=False)
+    
+    rawDataRecordsDF.rename(columns={'BESTANDSNAAM' : 'Bestandsnaam'}, inplace=True)
 
-    # Create a new column 'codeAndNumber' for rows where 'koppelingStatus' is 'gekoppeld'
-    exactDuplicates.loc[exactDuplicates['koppelingStatus'] == 'gekoppeld', 'codeAndNumber'] = exactDuplicates['filePath'].apply(
-    lambda x: os.path.join(*os.path.dirname(x).split(os.sep)[1:3]))
-    exactDuplicates.to_sql(name='exactDuplicates', 
+    rawDataRecordsDF.to_sql(name='rawDataRecords', 
                   con=connection, 
                   if_exists='replace',
                   index=False)
     
-    # Query to join the duplicate files with 'gekoppeld' as 'koppelingStatus'
-    # with the MaisFlexis records on codeEnNummer.
-    mapDuplicatesToConversionGekoppeld = """
-    CREATE TABLE IF NOT EXISTS exactDuplicatesConversionGekoppeld AS 
-    SELECT c.ID, c.AANVRAAGNUMMER, c.NUMMERING_CONVERSIE, d.filePath, d.hashValue AS fileHash, d.hashType, d.codeAndNumber, d.koppelingStatus  
-    FROM exactDuplicates d  
-    JOIN conversionNames c ON d.codeAndNumber = c.codeAndNumber
-    WHERE d.koppelingStatus = 'gekoppeld'
-    ORDER BY c.ID;
-    """
+    print('Mapping exact duplicates to MaisFlexis records')
+    
+    # Query to join the duplicate images with the MaisFlexis records.
+    mappedDuplicatesQuery = """
+    CREATE TABLE IF NOT EXISTS mappedDuplicates AS
+    SELECT 
+        c.ID, c.AANVRAAGNUMMER, c.NUMMERING_CONVERSIE, 
+        d.filePath, d.hashValue, d.hashType, r.TOEGANGSCODE, r.SCN_ID
+    FROM 
+        conversionNames c
+    JOIN 
+        exactDuplicates d ON 
+            d.Bestandsnaam = r.Bestandsnaam
+    JOIN 
+        rawDataRecords r ON r.ID = c.ID;
+        """
+        
+    cursor.execute(mappedDuplicatesQuery)
+    # Reading the exactDuplicates table as a pandas DataFrame.
+    mappedDuplicatesDF = pd.read_sql("SELECT * FROM mappedDuplicates", con=connection)
+    mappedDuplicatesDF['Koppelingstatus'] = 'gekoppeld'
+    
+    unmappedDuplicatesDF =\
+    exactDuplicatesDF[~exactDuplicatesDF.Bestandsnaam.isin(rawDataRecordsDF['Bestandsnaam'].to_list())]
 
-    # Executing the query to create the table.
-    cursor.execute(mapDuplicatesToConversionGekoppeld)
+    unmappedDuplicatesDF['Koppelingstatus'] = 'ongekoppeld'
+    exactDuplicatesMapped = pd.concat([unmappedDuplicatesDF, mappedDuplicatesDF])   
 
-    # Query to join the duplicate files with 'ongekoppeld' as 'koppelingStatus'
-    # with the 'gekoppeld' files in the exactDuplicatesConversionGekoppeld table created above on their fileHash
-    mapDuplicatesToConversionOngekoppeld = """
-    CREATE TABLE IF NOT EXISTS exactDuplicatesConversionOngekoppeld AS
-    SELECT g.ID, g.AANVRAAGNUMMER, g.NUMMERING_CONVERSIE, d.filePath, g.fileHash, g.hashType, d.codeAndNumber, d.koppelingStatus
-    FROM exactDuplicates d
-    JOIN exactDuplicatesConversionGekoppeld g ON g.fileHash= d.hashValue
-    WHERE d.koppelingStatus = 'ongekoppeld'
-    ORDER BY g.ID;
-    """
-
-    # Executing the query to create the table.
-    cursor.execute(mapDuplicatesToConversionOngekoppeld)
-
-    # Read the tables into DataFrames.
-    duplicatenConversieGekoppeld = pd.read_sql("SELECT * FROM exactDuplicatesConversionGekoppeld", con=connection)
-    duplicatenConversieOngekoppeld = pd.read_sql("SELECT * FROM exactDuplicatesConversionOngekoppeld", con=connection)
-
-    # Concatenating the DataFrames.
-    duplicatesMappedToConversionDF =\
-    pd.concat([duplicatenConversieGekoppeld, duplicatenConversieOngekoppeld])
-
-    duplicatesMappedToConversionDF.to_sql('duplicatesMappedToConversion', con=connection,
-                               if_exists='replace', index=False)
-
-    if not duplicatesMappedToConversionDF.empty:
-        # Split the 'codeAndNumber' column into two columns 'code' and 'number'
-        splitColumns = duplicatesMappedToConversionDF['codeAndNumber'].str.split('\\', expand=True)
-
-        # Ensure there are exactly two columns by filling any missing values
-        splitColumns = splitColumns.fillna('')
-
-        # Assign the split columns to 'code' and 'number'
-        duplicatesMappedToConversionDF[['code', 'number']] = splitColumns
-
-    duplicatesMappedToConversionDF.to_csv(os.path.join(processedDataPath, 'duplicatesMappedToConversion.csv'), index=False)
+    exactDuplicatesMapped.to_csv(os.path.join(processedDataPath, 'duplicateImagesMapped.csv'), index=False)
 
     # Closing the database connection.
     connection.close()
 
-    return duplicatesMappedToConversionDF
-
+    return exactDuplicatesMapped
 
 def getSimilarImages(tablesPath, processedDataPath):
     """
@@ -848,19 +835,7 @@ def getSimilarImages(tablesPath, processedDataPath):
         FROM pHashes
         GROUP BY pHash
         HAVING COUNT(*) > 1
-    )
-        
-    UNION ALL
-
-    SELECT 'aHash' AS hashType, aHash AS hashValue, filePath
-    FROM initialHashes
-    WHERE aHash IN (
-    SELECT aHash
-    FROM initialHashes
-    GROUP BY aHash
-    HAVING COUNT(*) > 1
-    )
-    ORDER BY hashType, hashValue, filePath;
+    );
     """
 
     # Executing the query to create the table.
@@ -950,122 +925,81 @@ def getSimilarImagesRanked(tablesPath, processedDataPath):
     connection.close()
     return similarImagesRankedDF
 
-
-def mapSimilarImagesToConversionNames(tablesPath, processedDataPath):
+    
+def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages, processedDataPath):
     """
-    This function categorizes the similar images as 'gekoppeld' or 'ongekoppeld', 
+    This function categorizes the exact duplicates as 'gekoppeld' or 'ongekoppeld', 
     extracts the code and number from the filePath of 'gekoppeld', combines it into a new
     column and maps it to the MaisFlexis records by joining on this column. This information is not obtainable 
     from the 'ongekoppeld' filepaths, so here they are instead mapped using the common hashvalue
     between 'ongekoppeld' and 'gekoppeld'. 
 
     Parameters:
-    tablesPath (str): Specifies the path of the SQLite database file..
+    tablesPath (str): Specifies the path of the SQLite database file.
     exifToolPath (str): Path to the ExifTool executable.
     processedDataPath (str): The path where the processed data is stored.
 
     Returns:
-    pandas.DataFrame: DataFrame containing the similar images and their conversion names.
+    pandas.DataFrame: DataFrame containing the mapped duplicates and their conversion names.
     """
-    
+
     # Connecting to the database in tablesPath.
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
+    
+    # Reading the dataRecords and exactDuplicatesDF
+    rawDataRecordsDF = pd.read_csv(rawDataRecords, low_memory=False)
+    similarImagesDF = pd.read_csv(similarImages)
 
-    print('############## Performing mapping to MaisFlexis records ##############')
-    print('|--------------------------------------------------------------------|')
+        
+    # Transformation on filePath to obtain common unique column values 
+    similarImagesDF['Bestandsnaam'] = similarImagesDF['filePath'].str.split('\\').str.get(-1)
+
+    # Saving the records data as an sql table 
+    similarImagesDF.to_sql(name='similarImages',
+                             con=connection,
+                             if_exists='replace',
+                             index=False)
+        
     print('Mapping similar images to MaisFlexis records')
-    # Reading the similarImagesRanked table as a pandas DataFrame.
-    similarImagesRanked = pd.read_sql("SELECT * FROM similarImagesRanked", con=connection)
-
-    # Adding a new column 'koppelingStatus' and setting its default value to 'gekoppeld'.
-    similarImagesRanked['koppelingStatus'] = 'gekoppeld'
-
-    # Update 'koppelingStatus' to 'ongekoppeld' for rows where 'filePath' contains '_OGK' or '_OGKB'.
-    similarImagesRanked.loc[similarImagesRanked['filePath'].str.contains('_OGK|_OGKB'), 'koppelingStatus'] = 'ongekoppeld'
-
-    # Create a new column 'codeAndNumber' for rows where 'koppelingStatus' is 'gekoppeld'
-    similarImagesRanked.loc[similarImagesRanked['koppelingStatus'] == 'gekoppeld', 'codeAndNumber'] = similarImagesRanked['filePath'].apply(
-    lambda x: os.path.join(*os.path.dirname(x).split(os.sep)[1:3]))
     
-    # Updating the similarImagesRanked SQL table.
-    similarImagesRanked.to_sql(name='similarImagesRanked', 
-                  con=connection, 
-                  if_exists='replace',
-                  index=False)
+    # Query to join the duplicate images with the MaisFlexis records.
+    mappedDuplicatesQuery = """
+    CREATE TABLE IF NOT EXISTS mappedSimilarImages AS
+    SELECT 
+        c.ID, c.AANVRAAGNUMMER, c.NUMMERING_CONVERSIE, 
+        d.filePath, d.hashValue, d.hashType, r.TOEGANGSCODE, r.SCN_ID
+    FROM 
+        conversionNames c
+    JOIN 
+        similarImages d ON 
+            d.Bestandsnaam = r.Bestandsnaam
+    JOIN 
+        rawDataRecords r ON r.ID = c.ID;
+        """
+        
+    cursor.execute(mappedDuplicatesQuery)
+    # Reading the exactDuplicates table as a pandas DataFrame.
+    mappedSimilarImagesDF = pd.read_sql("SELECT * FROM mappedSimilarImages", con=connection)
 
-    # Query to join the similar images with 'gekoppeld' as 'koppelingStatus'
-    # with the MaisFlexis records on codeEnNummer.
-    mapSimilarToConversionGekoppeld = """
-    CREATE TABLE IF NOT EXISTS similarImagesConversionGekoppeld AS 
-    SELECT c.ID, c.AANVRAAGNUMMER, c.NUMMERING_CONVERSIE, d.filePath, d.hashValue AS imageHash, d.hashType, d.XResolution, d.YResolution, d.numUniqueColors, d.rank, d.codeAndNumber, d.koppelingStatus  
-    FROM similarImagesRanked d  
-    JOIN conversionNames c ON d.codeAndNumber = c.codeAndNumber
-    WHERE d.koppelingStatus = 'gekoppeld'
-    AND c.ID IN (
-        SELECT ID
-        FROM conversionNames
-        JOIN similarImagesRanked ON conversionNames.codeAndNumber = similarImagesRanked.codeAndNumber
-        WHERE similarImagesRanked.koppelingStatus = 'gekoppeld'
-        GROUP BY ID
-        HAVING COUNT(*) > 1
-    )
-    ORDER BY imageHash ASC, d.rank ASC;
-    """
-    # Executing the query to create the table.
-    cursor.execute(mapSimilarToConversionGekoppeld)
+    mappedSimilarImagesDF['Koppelingstatus'] = 'gekoppeld'
 
-    # Query to join the similar images with 'ongekoppeld' as 'koppelingStatus'
-    # with the 'gekoppeld' files in the similarImagesConversionGekoppeld table created above on their fileHash
-    mapSimilarToConversionOngekoppeld = """
-    CREATE TABLE IF NOT EXISTS similarImagesConversionOngekoppeld AS
-    SELECT g.ID, g.AANVRAAGNUMMER, g.NUMMERING_CONVERSIE, d.filePath, d.hashValue AS imageHash, d.hashType, d.XResolution, d.YResolution, d.numUniqueColors, d.rank, d.codeAndNumber, d.koppelingStatus
-    FROM similarImagesRanked d
-    JOIN similarImagesConversionGekoppeld g ON g.imageHash = d.hashValue
-    WHERE d.koppelingStatus = 'ongekoppeld'
-    AND g.ID IN (
-        SELECT ID
-        FROM similarImagesConversionGekoppeld
-        GROUP BY ID
-        HAVING COUNT(*) > 1
-    )
-    ORDER BY imageHash ASC, d.rank ASC;
-    """
+    unmappedSimilarImagesDF = similarImagesDF[~similarImagesDF.Bestandsnaam.isin(rawDataRecordsDF['BESTANDSNAAM'].to_list())]
+    unmappedSimilarImagesDF['Koppelingstatus'] = 'ongekoppeld'
+    similarImagesMapped = pd.concat([unmappedSimilarImagesDF, mappedSimilarImagesDF])   
 
-    cursor.execute(mapSimilarToConversionOngekoppeld)
+    similarImagesMapped.to_csv(os.path.join(processedDataPath, 'similarImagesMapped.csv'), index=False)
 
-    # Reading the tables into DataFrames.
-    similarConversieGekoppeld = pd.read_sql("SELECT * FROM similarImagesConversionGekoppeld", con=connection)
-    similarConversionOngekoppeld = pd.read_sql("SELECT * FROM similarImagesConversionOngekoppeld", con=connection)
-
-    # Concatenating the DataFrames.
-    similarMappedToConversionDF =\
-    pd.concat([similarConversieGekoppeld, similarConversionOngekoppeld])
-
-    similarMappedToConversionDF.to_sql('similarImagesMappedToConversion', con=connection,
-                               if_exists='replace', index=False)
-    
-    if not similarMappedToConversionDF.empty:
-        # Split the 'codeAndNumber' column into two columns 'code' and 'number'
-        splitColumns = similarMappedToConversionDF['codeAndNumber'].str.split('\\', expand=True)
-
-        # Ensure there are exactly two columns by filling any missing values
-        splitColumns = splitColumns.fillna('')
-
-        # Assign the split columns to 'code' and 'number'
-        similarMappedToConversionDF[['code', 'number']] = splitColumns
-
-    similarMappedToConversionDF.to_csv(os.path.join(processedDataPath, 'similarMappedToConversion.csv'), index=False)
-
-    # Closing the connection.
+    # Closing the database connection.
     connection.close()
 
-    # Returning the concatenated DataFrame.
-    return similarMappedToConversionDF
-    
+    return similarImagesMapped
+
+
 def mapImagesToDescription(maisFlexisDescriptions, tablesPath):
     print('##########################    Finished!    ###########################')
     print('|--------------------------------------------------------------------|')
+
     pass
 
 

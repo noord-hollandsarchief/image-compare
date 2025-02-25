@@ -7,3 +7,14 @@ scripts/__pycache__/imageCompare.cpython-313.pyc
 data/images.db
 scripts/__pycache__/utils.cpython-313.pyc
 scripts/__pycache__/setup.cpython-313.pyc
+testImages/270_OGKB/NL-HlmNHA_270_2005.jpg
+testImages/270_OGKB/NL-HlmNHA_270_2006.jpg
+testImages/270_OGKB/NL-HlmNHA_270_2007.jpg
+testImages/270_OGKB/NL-HlmNHA_270_2008.jpg
+testImages/270_OGKB/NL-HlmNHA_270_2009.jpg
+testImages/270_OGKB/NL-HlmNHA_270_2010.jpg
+/testImages
+queries/test.sql
+data/raw/Beeldcollecties_nummeringen.xlsx
+data/raw/Beeldcollecties_nummeringen.xlsx
+data/queries/test.sql

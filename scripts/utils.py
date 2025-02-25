@@ -2,7 +2,7 @@ import os
 
 def createPaths():
     """
-    This function sets up the necessary paths for the project.
+    Sets up and returns the necessary project paths for directories and important files.
 
     Parameters:
     None
@@ -23,9 +23,13 @@ def createPaths():
     
     filePaths = {
         'tables': os.path.join(parentDir, 'data', 'images.db'),
-        'exifData': os.path.join(folderPaths['processedData'], 'exifData.csv'),
         'maisFlexisRecords': os.path.join(folderPaths['rawData'], 'Data_beeldbank.xlsx'),
-        'maisFlexisDescriptions': os.path.join(folderPaths['rawData'], 'EB_DB_ZieOOK.csv'),
+        'rawDataRecords': os.path.join(folderPaths['rawData'], 'SCN_BEELDBANK.csv'),
+        'exifData': os.path.join(folderPaths['processedData'], 'exifData.csv'),
+        'exactDuplicates': os.path.join(folderPaths['processedData'], 'exactDuplicates.csv'),
+        'similarImages': os.path.join(folderPaths['processedData'], 'similarImages.csv'),
+        'exactDuplicatesMapped': os.path.join(folderPaths['processedData'], 'exactDuplicatesMapped.csv'),
+        'similarImagesMapped': os.path.join(folderPaths['processedData'], 'similarImagesMapped.csv'),
         'hashPath': os.path.join(folderPaths['processedData'], 'imagesHash.csv')
     }
 
@@ -33,7 +37,7 @@ def createPaths():
 
 def ensureDirectoriesExist(paths):
     """
-    This function ensures that the required directories exist.
+    Checks if the required directories exist; if not, it creates them.
 
     Parameters:
     paths (dict): A dictionary containing the paths
@@ -44,3 +48,45 @@ def ensureDirectoriesExist(paths):
     for path in [paths['rawData'], paths['processedData']]:
         if not os.path.exists(path):
             os.makedirs(path)
+
+
+def asciiArt():
+
+    art = {
+        'logo': 
+        """                                                   
+ #######################@ %######################* 
+ #######################@ @%####@@@@############## 
+ #######################@ @%####@  @############## 
+ #######@@@@@@@@@@######@ @%####@  @@@@@@@######## 
+ #######@  @     @@#####@ @#####@  @     @@####### 
+ ######*@   @@@@  @%####@ @#####@   @@@:  @####### 
+ ######*@  @@#%@  @%####@ @#####@  @@#@@  @%###### 
+ ######*@  @%#*@  @@####@ @#####@  @%#*@  @%###### 
+ ######*@  @%#*@  @@####@ @#####@  @%#*@  @%###### 
+ #######@  @%##@  @%####@ @#####@  @###@  @%###### 
+ #######@@@@###@@@@#####@ @#####@@@@###@@@@####### 
+ @@@@@@@@@@@@@@@@@@@@@@@@ @@@@@@@@@@@@@@@@@@@@@@@@ 
+ +                                               = 
+ @@@@@@@@@@@@@@@@@@@@@@@@ @@@@@@@@@@@@%@@@@@@@@@@@ 
+ #######################@ @#@ @ @+*##@ @ %@ @ @ @* 
+ ########@@@@@@@@@######@ @#@ @ @+*##@ @ @@ @ @ @* 
+ ########@       @@#####@ @#@ @ @+*##@ @ @@ @ @ @* 
+ ########@@@@@@@  @%####@ @#@ @ @+*##@ @ @@ @ @ @* 
+ #######@@@       @@####@ @#@ @ @+*##@ @ @@ @ @ @* 
+ #######@  :@@@@  @@####@ @#@ @ @+*##@ @ @@ @ @ @* 
+ #######@  @@@@@  @@####@ @#@ @ @+*##@ @ @@ @ @ @* 
+ #######@@        @%####@ @#@ @ @+*##@ @ @@ @ @ @* 
+ ########@@@@@@@@@@#####@ @#@ @ @+*##@ @ @@ @ @ @* 
+ #######################@ @#@ @ @+*##@ @ @@ @ @ @* 
+ #######################@ @#% @ @=+##@ @ %@ @ @ @* 
+                                                   
+    """,
+    'title': 
+    """
+    ========== image comparison tool ==========
+          
+    """
+    }
+
+    return art    
