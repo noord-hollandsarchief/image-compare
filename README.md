@@ -1,9 +1,32 @@
 # image-compare
 
 ## Description
-This repository contains code that can find exact duplicates in a directory of images and rank similar images based on resolution and the number of unique colors. The exact duplicates and similar images are identified using a combined approach of file hashing and image hashing. Additionally, the images are (if possible) linked to MaisFlexis based on their accession number and inventory number. This information is specified in the path of the images and is also present in the corresponding MaisFlexis record. The corresponding duplicate/similar images that are not linkable by this information are connected through the matching hash values. The packages required to run the scripts are listed in `requirements.txt`. 
+This repository contains code that can find exact duplicates in a directory of images and rank similar images based on resolution and the number of unique colors. The exact duplicates and similar images are identified using a combined approach of file hashing and image hashing.
+
+Additionally, the images are mapped to the MaisFlexis records they belong to using their filenames and corresponding record IDs. The packages required to run the scripts are listed in `requirements.txt`. 
 
 **Note**: This is a work in progress and will continue to be improved.
+
+## Data
+
+Two excel files are used to check if the images are coupled to MaisFlexis. 
+
+These are:
+
+1. Data_beeldbank (contained in `data/raw/Data_beeldbank`)
+2. SCN_BEELDBANK (contained in `data/raw/SCN_BEELDBANK`)
+
+The queries used in the analysis are also included. These can be found in the data/queries folder.
+
+## Scripts
+`imageCompare.py`: Contains the core functions of the image analysis pipeline. 
+It calculates, collects, transforms, and maps image data, then saves the results as SQL tables in a `.db` file and `.csv` files.
+
+`setup.py`: Installs the necessary dependencies, either in the current environment or a new virtual environment, to ensure the pipeline functions correctly.
+
+`utils.py`: Manages file paths, helping to set up and reference directories and files across the project without hardcoding them in multiple places.
+
+`main.py`: The entry point of the project. Running this script triggers the entire pipeline, executing functions from the other scripts.
 
 ---
 ## Table of Contents
@@ -152,7 +175,7 @@ Follow the prompts:
 
 Test directory included in this repo:
 ```bash
-..\testImages\270
+..\testImages
 ```
 The pipeline will then start running.
 
@@ -183,7 +206,7 @@ Follow the prompt:
 
 Test directory included in this repo:
 ```bash
-..\testImages\270
+..\testImages
 ```
 The pipeline will then start running.
 
@@ -220,7 +243,7 @@ Follow the prompts:
 
 Test directory included in this repo:
 ```bash
-../testImages/270
+../testImages/
 ```
 - Enter the directory where ExifTool is installed:
   
@@ -250,7 +273,7 @@ Follow the prompts:
 
 Test directory included in this repo:
 ```bash
-../testImages/270
+../testImages
 ```
 - Enter the directory where ExifTool is installed: 
 
