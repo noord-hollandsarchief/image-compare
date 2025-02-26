@@ -71,7 +71,8 @@ def getExifData(allImageFilePaths, exifDataPath, exifToolPath):
     exifData = pd.DataFrame(columns=exifDataColumns, index=range(len(allImageFilePaths)))
 
     # Obtain the Exif metadata from each of the files in the list of paths.
-    for i in tqdm.tqdm(range(len(allImageFilePaths)), desc='Extracting exif metadata', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+    print()
+    for i in tqdm.tqdm(range(len(allImageFilePaths)), desc='[START] Extracting exif metadata', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
     ncols=80, 
     ascii=" ░▒▓█"):
         command = [exifToolPath, '-json', allImageFilePaths[i]]
@@ -90,9 +91,10 @@ def getExifData(allImageFilePaths, exifDataPath, exifToolPath):
         except Exception as e:
             print(f"Error processing {allImageFilePaths[i]}: {e}")
 
+    print('[√] exif metadata extracted succesfully!')
     # Saving the exifData DataFrame to a CSV file.\
     exifData.to_csv(exifDataPath, index=False)
-
+    
     return exifData
 
 
@@ -111,11 +113,12 @@ def getConversionNames(maisFlexisRecords, tablesPath):
     """
 
     connection = sqlite3.connect(database=tablesPath)
-
+    print()
     # Initialize tqdm progress bar for the transformation process
-    tqdm.tqdm.pandas(desc=f'Parsing MaisFlexis records', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+    tqdm.tqdm.pandas(desc=f'[START] Parsing MaisFlexis records', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
     ncols=80, 
     ascii=" ░▒▓█")
+    
     # Reading the raw records data file into a pandas DataFrame
     recordsDF = pd.read_excel(maisFlexisRecords)
     
@@ -146,7 +149,8 @@ def getConversionNames(maisFlexisRecords, tablesPath):
         recordsDF['NUMMER'].astype(str) + 
         np.where(recordsDF['CODE_1'].fillna('') != '', recordsDF['CODE_1'].astype(str), '')
     )
-    
+    print('[√] MaisFlexis records parsed succesfully')
+
     recordsDF.to_sql('conversionNames', con=connection, 
                        if_exists='replace', index=False)
     
@@ -262,7 +266,8 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
         raise ValueError(f"Unsupported algorithm: {algorithm}")
     
     # Calculate the hashes for each of the files in the list of paths.
-    for filePath in tqdm.tqdm(filePaths, desc=f'Calculating {algorithm} hashes', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+    print()
+    for filePath in tqdm.tqdm(filePaths, desc=f'[START] Calculating {algorithm} hashes', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
     ncols=80, 
     ascii=" ░▒▓█"):
         try:
@@ -306,7 +311,7 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
         finally:
             if os.path.exists(tempPath):
                 os.remove(tempPath)
-
+    print(f'[√] Calculated {algorithm} hashes succesfully!')
     return hashList
 
 
@@ -330,11 +335,12 @@ def getInitialHashData(allImageFilePaths, hashPath, exifToolPath):
     # Assigning the values to the pandas DataFrame as lists.
     hashData['md5Hash'] = getFileHash(allImageFilePaths, exifToolPath, algorithm='md5')
     algorithm='average_hash'
-    hashData['aHash'] = [getImageHash(p, algorithm='average_hash') for p in tqdm.tqdm(allImageFilePaths, desc=f'Calculating {algorithm} hashes', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+    print()
+    hashData['aHash'] = [getImageHash(p, algorithm='average_hash') for p in tqdm.tqdm(allImageFilePaths, desc=f'[START] Calculating {algorithm} hashes', bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
     ncols=80, 
     ascii=" ░▒▓█")]
     hashData['filePath'] = allImageFilePaths
-
+    print(f'[√] {algorithm}es calculated succesfully!')
     # Saving the pandas DataFrame as CSV file.
     hashData.to_csv(hashPath, index=False)
     return hashData
@@ -428,22 +434,26 @@ def getUniqueColors(imageFilePaths):
     Image.MAX_IMAGE_PIXELS = None
 
     numUniqueColorsList = [] 
-
+   
     # Calculate the number of unique colors for each of the files in the list of paths.
-    for filePath in imageFilePaths:
+    for i in range(len(tqdm.tqdm(range(len(imageFilePaths)),
+                    desc='[START] Exctacting number of unique colors.',
+                    bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+                    ncols=80, 
+                    ascii=" ░▒▓█"))):
         try:
-            image = Image.open(filePath)
+            image = Image.open(imageFilePaths[i])
             image = image.convert('RGB')
             colors = image.getcolors(maxcolors=256*256*256)
             numUniqueColors = len(colors)
             numUniqueColorsList.append(numUniqueColors)
         # When the process fails we execute the following steps:
         except Exception as e:
-            message = f"Error processing {filePath}: {e}"
+            message = f"Error processing {imageFilePaths[i]}: {e}"
             # Add to numUniqueColorsList to match the length of the pandas DataFrame.
             numUniqueColorsList.append(message)
             print(message)
-
+    print(f'[√] Calculated number of unique colors succesfully!')
     return numUniqueColorsList
 
 
@@ -495,12 +505,17 @@ def getUniqueColorsTable(tablesPath, processedDataPath):
     
     uniqueColorsDF =\
     pd.read_sql(similarImagesSameResolution, con=connection)
-
-    # These paths are used to calculate the number of unique colors.
-    uniqueColorsDF['numUniqueColors'] = getUniqueColors(uniqueColorsDF['filePath'].tolist())
-    uniqueColorsDF.to_sql('uniqueColorData', con=connection,
-                    if_exists='replace', index=False)
     
+    # These paths are used to calculate the number of unique colors.
+    if len(uniqueColorsDF) > 0:
+        uniqueColorsDF['numUniqueColors'] = getUniqueColors(uniqueColorsDF['filePath'].tolist())
+    
+    else:
+        uniqueColorsDF['numUniqueColors'] = np.nan
+
+    uniqueColorsDF.to_sql('uniqueColorData', con=connection,
+                        if_exists='replace', index=False)
+
     # Saving the uniqueColorsDF to CSV.
     uniqueColorsDF.to_csv(os.path.join(processedDataPath, 'uniqueColors.csv'), index=False)
 
@@ -523,8 +538,9 @@ def getInitialImageData(allImageFilePaths, exifToolPath, hashPath, exifDataPath)
     A pandas DataFrame with the extracted Exif data.
     """
 
-    print('################### Obtaining initial image data ###################')
-    print('|--------------------------------------------------------------------|')
+    print()
+    print('###################### Obtaining initial image data ######################')
+    print('|------------------------------------------------------------------------|')
     # The initial hash data (filePath, aHash, MD5)
     initialHashData = getInitialHashData(allImageFilePaths=allImageFilePaths,
                                          hashPath=hashPath, 
@@ -557,7 +573,8 @@ def fillTablesInitialData(exifData, initialHashData, tablesPath):
         connection = sqlite3.connect(database=tablesPath)
         # Inserting the data from the DataFrame into the SQLite tables.
 
-        print('Filling tables..')
+        print('\n[START] Inserting the initial image data into the SQL tables.')
+        print('[√] Tables filled succesfully!')
 
         exifData.to_sql('exifData', con=connection,
                        if_exists='replace', index=False)  
@@ -570,170 +587,13 @@ def fillTablesInitialData(exifData, initialHashData, tablesPath):
     finally:
         if connection:
             connection.close()
-            print("The SQLite connection is closed")
 
 
 def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
-  """
-  This function identifies and processes duplicate images based on their hash values,
-  calculates additional hashes for further verification, and stores the results in a SQLite database
-  and a CSV file.
-
-  Parameters:
-  tablesPath (str): Specifies the path of the SQLite database file.
-  exifToolPath (str): Path to the ExifTool executable.
-  processedDataPath (str): The path where the processed data is stored.
-  
-  Returns:
-  None
-  """
-  # Connecting to the database in tablesPath.
-  connection = sqlite3.connect(database=tablesPath)
-  cursor = connection.cursor()
-
-  # Performing queries to find possible duplicates
-  #images where both md5Hash and aHash are duplicated (exact duplicates).
-  queryMD5andImageHash = """
-  SELECT md5Hash, aHash, filePath
-  FROM initialHashes
-
-  WHERE (md5Hash, aHash) IN (
-  SELECT md5Hash, aHash
-  FROM initialHashes
-  GROUP BY md5Hash, aHash
-  HAVING COUNT(*) > 1
-  )
-  ORDER BY md5Hash
-  """
-
-  # Images were md5Hash is duplicated but not aHash (md5 collision).
-  queryMD5notImageHash = """
-  SELECT md5Hash, aHash, filePath
-  FROM initialHashes
-  WHERE md5Hash IN (
-  SELECT md5Hash
-  FROM initialHashes
-  GROUP BY md5Hash
-  HAVING COUNT(*) > 1
-  )
-  AND aHash NOT IN (
-  SELECT aHash
-  FROM initialHashes
-  GROUP BY aHash
-  HAVING COUNT(*) > 1
-  )
-  ORDER BY md5Hash, aHash;
-  """
-
-  # Images were md5Hash is not duplicated but aHash is (aHash collision or 
-  # different metadata).
-  queryNotMD5AndImageHash = """
-  SELECT md5Hash, aHash, filePath
-  FROM initialHashes
-  WHERE aHash IN (
-  SELECT aHash
-  FROM initialHashes
-  GROUP BY aHash
-  HAVING COUNT(*) > 1
-  )
-  AND md5Hash NOT IN (
-  SELECT md5Hash
-  FROM initialHashes
-  GROUP BY md5Hash
-  HAVING COUNT(*) > 1
-  )
-  ORDER BY aHash, md5Hash;
-  """
-  print('################### Obtaining exact duplicates ####################')
-  print('|-----------------------------------------------------------------|')
-
-  # Executing the above queries and loading the results into DataFrames.
-  aHashAndMD5 = pd.read_sql(queryMD5andImageHash,
-                            con=connection)
-  noAHashAndMD5 = pd.read_sql(queryMD5notImageHash,
-                              con=connection)
-  aHashAndNotMD5 = pd.read_sql(queryNotMD5AndImageHash,
-                               con=connection)
-  
-  # Calculating the additional hashes.
-  print('Calculating additional hashes')
-  noAHashAndMD5['sha256Hash'] = getFileHash(noAHashAndMD5['filePath'].tolist(),
-                                            exifToolPath, 
-                                            algorithm='sha256')
-  algorithm = 'pHash'
-  aHashAndNotMD5['pHash'] = [getImageHash(p, algorithm='phash') 
-                             for p in tqdm.tqdm(aHashAndNotMD5['filePath'].tolist(),
-                             desc=f'Calculating {algorithm} hashes', 
-                             bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
-    ncols=80, 
-    ascii=" ░▒▓█")]
-  
-  # Combining results into a single DataFrame.
-  finalHashesDF = pd.concat([aHashAndMD5,
-                             noAHashAndMD5,  
-                             aHashAndNotMD5])
-
-  # Extracting the rows with calculated hashes.
-  sha256Rows =\
-  finalHashesDF[['filePath', 'sha256Hash']].dropna()
-
-  pHashRows =\
-  finalHashesDF[['filePath', 'pHash']].dropna()
-
-  # Storing the results in SQLite tables.
-  sha256Rows.to_sql(name='sha256Rows', 
-                  con=connection, 
-                  if_exists='replace',
-                  index=False)
-  
-  pHashRows.to_sql(name='pHashes',
-                   con=connection,
-                   if_exists='replace',
-                   index=False)
-
-  # Creating the table for exact duplicates.
-  exactDuplicatesQuery = """
-  CREATE TABLE IF NOT EXISTS exactDuplicates AS
-  SELECT 'md5Hash' AS hashType, md5Hash AS hashValue, filePath
-  FROM initialHashes
-  WHERE (md5Hash, aHash) IN (
-  SELECT md5Hash, aHash
-  FROM initialHashes
-  GROUP BY md5Hash, aHash
-  HAVING COUNT(*) > 1
-  )
-
-  UNION ALL
-
-  SELECT 'sha256Hash' AS hashType, sha256Hash AS hashValue, filePath
-  FROM sha256Rows
-  WHERE sha256Hash IN (
-  SELECT sha256Hash
-  FROM sha256Rows
-  GROUP BY sha256Hash
-  HAVING COUNT(*) > 1
-  )
-  ORDER BY hashType, hashValue, filePath;
-  """
-  
-  cursor.execute(exactDuplicatesQuery)
-  connection.commit()
-
-  # Saving the final DataFrame to CSV.
-  exactDuplicatesDF = pd.read_sql("SELECT * FROM exactDuplicates", con=connection)
-  exactDuplicatesDF =\
-  exactDuplicatesDF.to_csv(os.path.join(processedDataPath, 'exactDuplicates.csv'), index=False)
-
-  connection.close()
-
-
-def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, processedDataPath):
     """
-    This function categorizes the exact duplicates as 'gekoppeld' or 'ongekoppeld', 
-    extracts the code and number from the filePath of 'gekoppeld', combines it into a new
-    column and maps it to the MaisFlexis records by joining on this column. This information is not obtainable 
-    from the 'ongekoppeld' filepaths, so here they are instead mapped using the common hashvalue
-    between 'ongekoppeld' and 'gekoppeld'. 
+    This function identifies and processes duplicate images based on their hash values,
+    calculates additional hashes for further verification, and stores the results in a SQLite database
+    and a CSV file.
 
     Parameters:
     tablesPath (str): Specifies the path of the SQLite database file.
@@ -741,13 +601,200 @@ def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, 
     processedDataPath (str): The path where the processed data is stored.
 
     Returns:
-    pandas.DataFrame: DataFrame containing the mapped duplicates and their conversion names.
+    None
+    """
+    print('\n######################  Obtaining exact duplicates  #####################')
+    print('|------------------------------------------------------------------------|')
+    print('\n[START] Analyzing initial hash data.')
+    # Connecting to the database in tablesPath.
+    connection = sqlite3.connect(database=tablesPath)
+    cursor = connection.cursor()
+
+    # Performing queries to find possible duplicates
+    #images where both md5Hash and aHash are duplicated (exact duplicates).
+    queryMD5andImageHash = """
+    SELECT md5Hash, aHash, filePath
+    FROM initialHashes
+
+    WHERE (md5Hash, aHash) IN (
+    SELECT md5Hash, aHash
+    FROM initialHashes
+    GROUP BY md5Hash, aHash
+    HAVING COUNT(*) > 1
+    )
+    ORDER BY md5Hash
+    """
+
+    # Images were md5Hash is duplicated but not aHash (md5 collision).
+    queryMD5notImageHash = """
+    SELECT md5Hash, aHash, filePath
+    FROM initialHashes
+    WHERE md5Hash IN (
+    SELECT md5Hash
+    FROM initialHashes
+    GROUP BY md5Hash
+    HAVING COUNT(*) > 1
+    )
+    AND aHash NOT IN (
+    SELECT aHash
+    FROM initialHashes
+    GROUP BY aHash
+    HAVING COUNT(*) > 1
+    )
+    ORDER BY md5Hash, aHash;
+    """
+
+    # Images were md5Hash is not duplicated but aHash is (aHash collision or 
+    # different metadata).
+    queryNotMD5AndImageHash = """
+    SELECT md5Hash, aHash, filePath
+    FROM initialHashes
+    WHERE aHash IN (
+    SELECT aHash
+    FROM initialHashes
+    GROUP BY aHash
+    HAVING COUNT(*) > 1
+    )
+    AND md5Hash NOT IN (
+    SELECT md5Hash
+    FROM initialHashes
+    GROUP BY md5Hash
+    HAVING COUNT(*) > 1
+    )
+    ORDER BY aHash, md5Hash;
+    """
+
+    # Executing the above queries and loading the results into DataFrames.
+    aHashAndMD5 = pd.read_sql(queryMD5andImageHash,
+                            con=connection)
+    noAHashAndMD5 = pd.read_sql(queryMD5notImageHash,
+                                con=connection)
+    aHashAndNotMD5 = pd.read_sql(queryNotMD5AndImageHash,
+                                con=connection)
+    print('[√] Analyzed initial hash data succesfully!')
+    # Calculating the additional hashes.
+    if len(noAHashAndMD5) > 0 or len(aHashAndNotMD5) > 0:
+        print('\nPossible hash collissions found.')
+        print('\n[START] calculating additional hashes.')
+
+    if len(noAHashAndMD5) > 0:
+        noAHashAndMD5['sha256Hash'] = getFileHash(noAHashAndMD5['filePath'].tolist(),
+                                            exifToolPath, 
+                                            algorithm='sha256')
+    if len(aHashAndNotMD5) > 0:
+        algorithm = 'pHash'
+        print()
+        aHashAndNotMD5['pHash'] = [getImageHash(aHashAndNotMD5['filePath'].tolist()[i], algorithm='phash') 
+                                for i in tqdm.tqdm(range(len(aHashAndNotMD5['filePath'].tolist())),
+                                desc=f' * [START] Calculating {algorithm}es', 
+                                bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
+                                ncols=80, 
+                                ascii=" ░▒▓█")]
+        
+        print(f' * [√] {algorithm}es calculated succesfully!')
+        print(f'\n[√] additional hashes calculated succesfully!')
+    # Combining results into a single DataFrame.
+    finalHashesDF = pd.concat([aHashAndMD5,
+                                noAHashAndMD5,  
+                                aHashAndNotMD5])
+
+    # Extracting the rows with calculated hashes.
+    sha256Rows =\
+    finalHashesDF[['filePath', 'sha256Hash']].dropna() if 'sha256Hash' in finalHashesDF.columns \
+                                                       else pd.DataFrame(columns=['filePath', 'sha256Hash'])
+
+    pHashRows =\
+    finalHashesDF[['filePath', 'pHash']].dropna() if 'pHash' in finalHashesDF.columns \
+                                                  else pd.DataFrame(columns=['filePath', 'pHash'])
+
+
+    # Storing the results in SQLite tables.
+    if not sha256Rows.empty:
+        sha256Rows.to_sql(name='sha256Rows', 
+                        con=connection, 
+                        if_exists='replace',
+                        index=False)
+         # If the DataFrame is empty, create the table with the correct schema (no data).
+    else:
+        sha256Rows.iloc[0:0].to_sql(name='sha256Rows', 
+                        con=connection, 
+                        if_exists='replace',
+                        index=False)
+        
+    if not pHashRows.empty:
+        pHashRows.to_sql(name='pHashes',
+                        con=connection,
+                        if_exists='replace',
+                        index=False)
+    else:
+        # If the DataFrame is empty, create the table with the correct schema (no data).
+        pHashRows.iloc[0:0].to_sql(name='pHashes',
+                        con=connection,
+                        if_exists='replace',
+                        index=False)
+
+        # Creating the table for exact duplicates.
+    exactDuplicatesQuery = """
+    CREATE TABLE IF NOT EXISTS exactDuplicates AS
+    SELECT 'md5Hash' AS hashType, md5Hash AS hashValue, filePath
+    FROM initialHashes
+    WHERE (md5Hash, aHash) IN (
+    SELECT md5Hash, aHash
+    FROM initialHashes
+    GROUP BY md5Hash, aHash
+    HAVING COUNT(*) > 1
+    )
+
+    UNION ALL
+
+    SELECT 'sha256Hash' AS hashType, sha256Hash AS hashValue, filePath
+    FROM sha256Rows
+    WHERE sha256Hash IN (
+    SELECT sha256Hash
+    FROM sha256Rows
+    GROUP BY sha256Hash
+    HAVING COUNT(*) > 1
+    )
+    ORDER BY hashType, hashValue, filePath;
+    """
+
+    cursor.execute(exactDuplicatesQuery)
+    connection.commit()
+
+    # Saving the final DataFrame to CSV.
+    exactDuplicatesDF = pd.read_sql("SELECT * FROM exactDuplicates", con=connection)
+    exactDuplicatesDF =\
+    exactDuplicatesDF.to_csv(os.path.join(processedDataPath, 'exactDuplicates.csv'), index=False)
+    print('[√] Exact duplicates saved succesfully!')
+    connection.close()
+
+
+def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, processedDataPath):
+    """
+    Maps exact duplicate records to MaisFlexis conversion names and saves the results to a CSV file.
+    
+    This function reads raw image data and exact duplicate records, transforms the necessary 
+    columns, and performs a database join operation to map duplicates to MaisFlexis records.
+    It outputs a CSV file with both mapped and unmapped duplicates, indicating their 
+    connection status.
+
+    Parameters:
+    tablesPath (str): Path to the SQLite database that contains the conversion names.
+    rawDataRecords (str): Path to the raw data CSV file containing the raw image data records.
+    exactDuplicates (str): Path to the exact duplicates CSV file containing duplicate image data.
+    processedDataPath (str): Path to save the output CSV file containing the mapped and unmapped duplicates.
+
+    Returns:
+    pandas.DataFrame: A DataFrame containing the mapped exact duplicates along with their 
+    conversion names and mapping status.
     """
 
     # Connecting to the database in tablesPath.
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
-    
+    print('\n################ Mapping images to MaisFlexis records #################')
+    print('|------------------------------------------------------------------------|')
+    print('\n[START] Transforming duplicate records and preparing data for mapping.')
     # Reading the dataRecords and exactDuplicatesDF
     rawDataRecordsDF = pd.read_csv(rawDataRecords, low_memory=False)
     exactDuplicatesDF = pd.read_csv(exactDuplicates)
@@ -769,8 +816,9 @@ def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, 
                   if_exists='replace',
                   index=False)
     
-    print('Mapping exact duplicates to MaisFlexis records')
     
+    print('[√] Data transformed and loaded into the database.')
+    print('\n[START] Mapping exact duplicates to MaisFlexis conversion names.')
     # Query to join the duplicate images with the MaisFlexis records.
     mappedDuplicatesQuery = """
     CREATE TABLE IF NOT EXISTS mappedDuplicates AS
@@ -789,18 +837,19 @@ def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, 
     cursor.execute(mappedDuplicatesQuery)
     # Reading the exactDuplicates table as a pandas DataFrame.
     mappedDuplicatesDF = pd.read_sql("SELECT * FROM mappedDuplicates", con=connection)
-    mappedDuplicatesDF['Koppelingstatus'] = 'gekoppeld'
+    mappedDuplicatesDF.loc['Koppelingstatus'] = 'gekoppeld'
     
     unmappedDuplicatesDF =\
-    exactDuplicatesDF[~exactDuplicatesDF.Bestandsnaam.isin(rawDataRecordsDF['Bestandsnaam'].to_list())]
+    exactDuplicatesDF[~exactDuplicatesDF.Bestandsnaam.isin(rawDataRecordsDF['Bestandsnaam'].to_list())].copy()
 
-    unmappedDuplicatesDF['Koppelingstatus'] = 'ongekoppeld'
+    unmappedDuplicatesDF.loc[:, 'Koppelingstatus'] = 'ongekoppeld'
     exactDuplicatesMapped = pd.concat([unmappedDuplicatesDF, mappedDuplicatesDF])   
 
     exactDuplicatesMapped.to_csv(os.path.join(processedDataPath, 'duplicateImagesMapped.csv'), index=False)
 
     # Closing the database connection.
     connection.close()
+    print('[√] Exact duplicates successfully mapped to MaisFlexis records!')
 
     return exactDuplicatesMapped
 
@@ -822,10 +871,10 @@ def getSimilarImages(tablesPath, processedDataPath):
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
 
-    print('#################### Obtaining similar images ####################')
-    print('|-----------------------------------------------------------------|')
-
-    # Query to select images with duplicate aHash and images with duplicate pHash.
+    print('\n######################   Obtaining similar images   #####################')
+    print('|------------------------------------------------------------------------|')
+    print('\n[START] Analyzing image hashes.')
+    # Query to select images with duplicate pHash.
     querySimilarImages = """
     CREATE TABLE IF NOT EXISTS similarImages AS
     SELECT 'pHash' as hashType, pHash as hashValue, filePath
@@ -841,14 +890,13 @@ def getSimilarImages(tablesPath, processedDataPath):
     # Executing the query to create the table.
     cursor.execute(querySimilarImages)
     connection.commit()
-
+    print('[√] Image hashes analyzed successfully!')
     # Reading the table into a pandas DataFrame.
     pHashSimilarImagesDF = pd.read_sql("SELECT * FROM similarImages", connection)
     
     # Saving the tables as CSV.
     pHashSimilarImagesDF =\
     pHashSimilarImagesDF.to_csv(os.path.join(processedDataPath, 'similarImages.csv'), index=False)
-
     connection.close() 
 
     return pHashSimilarImagesDF
@@ -871,7 +919,7 @@ def getSimilarImagesRanked(tablesPath, processedDataPath):
     # Connecting to the database in tablesPath.
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
-
+    print('\n[START] Ranking similar images.')
     # Query to create the similarImagesRanked table based on pHash,
     # resolution and number of unique colors.
     # The best image is the one with the highest resolution.
@@ -923,6 +971,7 @@ def getSimilarImagesRanked(tablesPath, processedDataPath):
     # Committing the changes and closing the connection
     connection.commit()
     connection.close()
+    print('[√] Similar images ranked succesfully!')
     return similarImagesRankedDF
 
     
@@ -946,7 +995,7 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages,
     # Connecting to the database in tablesPath.
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
-    
+    print('\n[START] Transforming similar records and preparing data for mapping.')
     # Reading the dataRecords and exactDuplicatesDF
     rawDataRecordsDF = pd.read_csv(rawDataRecords, low_memory=False)
     similarImagesDF = pd.read_csv(similarImages)
@@ -961,7 +1010,8 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages,
                              if_exists='replace',
                              index=False)
         
-    print('Mapping similar images to MaisFlexis records')
+    print('[√] Data transformed and loaded into the database.')
+    print('\n[START] Mapping similar images to MaisFlexis conversion names.')
     
     # Query to join the duplicate images with the MaisFlexis records.
     mappedDuplicatesQuery = """
@@ -992,16 +1042,12 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages,
 
     # Closing the database connection.
     connection.close()
+    print('[√] Similar images successfully mapped to MaisFlexis records!')
 
     return similarImagesMapped
 
 
 def mapImagesToDescription(maisFlexisDescriptions, tablesPath):
-    print('##########################    Finished!    ###########################')
-    print('|--------------------------------------------------------------------|')
-
+    print('\n########################### Analysis complete! ###########################')
+    print('\nThe results are saved in the data\\processed folder.')
     pass
-
-
-
-        

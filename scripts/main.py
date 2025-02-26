@@ -10,9 +10,7 @@ def main():
     
     folderPaths, filePaths = utils.createPaths()
     directory, exifToolPath = setup.getUserInputs(folderPaths)
-    print("""Setting up the paths and tables..
-          """)
- 
+
     # List of paths to the image files to be analysed.
     allImageFilePaths = imageCompare.getAllImageFilePaths(directory=directory)  
 
