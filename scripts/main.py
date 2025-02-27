@@ -5,11 +5,13 @@ import setup
 
 def main():
     
+    #### Program Initialization and Setup #### 
+
     art = utils.asciiArt()
     print(art['logo'], art['title'])
     
     folderPaths, filePaths = utils.createPaths()
-    directory, exifToolPath = setup.getUserInputs(folderPaths)
+    directory, mapping, exifToolPath = setup.getUserInputs(folderPaths)
 
     # List of paths to the image files to be analysed.
     allImageFilePaths = imageCompare.getAllImageFilePaths(directory=directory)  
@@ -19,8 +21,9 @@ def main():
     # Initializing the SQL tables.
     imageCompare.makeTables(filePaths['tables'])
 
-    ### Gathering the data ###
-    ##########################
+    ########### Gathering the data ###########
+    ##########################################
+
     initialHashData, exifData =\
     imageCompare.getInitialImageData(allImageFilePaths=allImageFilePaths,
                                      exifToolPath=exifToolPath,
@@ -37,32 +40,35 @@ def main():
                                     exifToolPath=exifToolPath,
                                     processedDataPath=folderPaths['processedData'])
 
-    ## Analysis on the data ##
-    ##########################
+    ########## Analysis on the data ##########
+    ##########################################
+
     imageCompare.getSimilarImages(tablesPath=filePaths['tables'],
                                   processedDataPath=folderPaths['processedData'])
-    # Obtaining the number of unique colors data
+    # Obtaining the number of unique colors data.
     imageCompare.getUniqueColorsTable(tablesPath=filePaths['tables'],
                                       processedDataPath=folderPaths['processedData'])
-    
+    #Ranking the similar images based on resolution and number of unique colors.
     imageCompare.getSimilarImagesRanked(tablesPath=filePaths['tables'],
-                                        processedDataPath=folderPaths['processedData'])  
-    # The parsed maisFlexisRecords
-    imageCompare.getConversionNames(maisFlexisRecords=filePaths['maisFlexisRecords'],
-                                    tablesPath=filePaths['tables'])
+                                        processedDataPath=folderPaths['processedData']) 
+     
+    ## Mapping images to MaisFlexis records ##
+    ################ *OPTIONAL* ################
 
-    imageCompare.mapDuplicatesToConversionNames(tablesPath=filePaths['tables'], 
-                                                rawDataRecords=filePaths['rawDataRecords'],
-                                                exactDuplicates=filePaths['exactDuplicates'],
-                                                processedDataPath=folderPaths['processedData'])
-    
-    imageCompare.mapSimilarImagesToConversionNames(tablesPath=filePaths['tables'], 
-                                                   rawDataRecords=filePaths['rawDataRecords'],
-                                                   similarImages=filePaths['similarImages'],
-                                                   processedDataPath=folderPaths['processedData'])
-    
-    imageCompare.mapImagesToDescription(maisFlexisDescriptions=filePaths['maisFlexisRecords'],
+    if mapping == 'Y':
+        # Parsing the MaisFlexis records.
+        imageCompare.getConversionNames(maisFlexisRecords=filePaths['maisFlexisRecords'],
                                         tablesPath=filePaths['tables'])
-    
+        # Mapping the images to MaisFlexis Records
+        imageCompare.mapDuplicatesToConversionNames(tablesPath=filePaths['tables'], 
+                                                    rawDataRecords=filePaths['rawDataRecords'],
+                                                    exactDuplicates=filePaths['exactDuplicates'],
+                                                    processedDataPath=folderPaths['processedData'])
+        
+        imageCompare.mapSimilarImagesToConversionNames(tablesPath=filePaths['tables'], 
+                                                    rawDataRecords=filePaths['rawDataRecords'],
+                                                    similarImages=filePaths['similarImages'],
+                                                    processedDataPath=folderPaths['processedData'])
+        
 if __name__ == "__main__":
     main()
