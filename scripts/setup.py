@@ -77,13 +77,30 @@ def getUserInputs(paths):
     Returns:
     directory, exifToolPath (tuple): A tuple containing the images directory and the ExifTool path.
     """
+    print('####################### Program Initialization ###########################')
+    print('|------------------------------------------------------------------------|')
     directory = input('Enter the images directory: ')
+    mapping = input(
+                    'Would you like the output to be mapped to MaisFlexis records? (Y/N)\n\n'
+                    'IMPORTANT: This will only work if your mapping files are set up exactly like the fields in the following files:\n'
+                    '- data\\raw\\Data_beeldbank_270\n'
+                    '- data\\raw\\SCN_BEELDBANK_270\n\n'
+                    ).upper()
+    while True:
+        if mapping not in ('Y', 'N'):
+            print('Invalid choice. Please enter "Y" or "N".')
+            mapping = input('Would you like the output to be mapped to MaisFlexis records? (Y/N) \n'
+                    'IMPORTANT: This will only work if your mapping files are set up exactly like the fields in the following files: \n\
+                    - data\\raw\\Data_beeldbank_270\n - data\\raw\\SCN_BEELDBANK_270 \n\n')   
+        else:
+            break
+
     if platform.system() != 'Windows':
         exifToolPath = input('Enter the directory where the ExifTool is installed: ')
     else:
         exifToolPath = paths['exifToolWindows']
 
-    return directory, exifToolPath
+    return directory, mapping, exifToolPath
 
 def main():
     paths = createPaths()
