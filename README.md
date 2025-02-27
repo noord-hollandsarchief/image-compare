@@ -16,6 +16,7 @@ These are:
 1. Data_beeldbank (contained in `data/raw/Data_beeldbank`)
 2. SCN_BEELDBANK (contained in `data/raw/SCN_BEELDBANK`)
 
+The fields are described in the first line of each of the respective files.
 The queries used in the analysis are also included. These can be found in the data/queries folder.
 
 ## Scripts
