@@ -23,8 +23,8 @@ def createPaths():
     
     filePaths = {
         'tables': os.path.join(parentDir, 'data', 'images.db'),
-        'maisFlexisRecords': os.path.join(folderPaths['rawData'], 'Data_beeldbank.xlsx'),
-        'rawDataRecords': os.path.join(folderPaths['rawData'], 'SCN_BEELDBANK.csv'),
+        'maisFlexisRecords': os.path.join(folderPaths['rawData'], 'Data_beeldbank_270.xlsx'),
+        'rawDataRecords': os.path.join(folderPaths['rawData'], 'SCN_BEELDBANK_270.csv'),
         'exifData': os.path.join(folderPaths['processedData'], 'exifData.csv'),
         'exactDuplicates': os.path.join(folderPaths['processedData'], 'exactDuplicates.csv'),
         'similarImages': os.path.join(folderPaths['processedData'], 'similarImages.csv'),
