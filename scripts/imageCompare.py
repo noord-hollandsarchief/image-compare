@@ -38,9 +38,8 @@ def getAllImageFilePaths(directory):
             allFilePaths.append(fullPath)
     
     # Assume the file extensions of images are of length 3 (e.g., jpg, png).
-    imageExtensions = list(set([p.split('.')[-1] 
-                                for p in allFilePaths
-                                if len(p.split('.')[-1]) == 3]))    
+    imageExtensions = set(p.split('.')[-1] for p in allFilePaths
+                          if len(p.split('.')[-1]) == 3)
     
     # Filter the file paths to include only image files.
     allImageFilePaths = [p for p in allFilePaths 
@@ -120,7 +119,7 @@ def getConversionNames(maisFlexisRecords, tablesPath):
     ascii=" ░▒▓█")
     
     # Reading the raw records data file into a pandas DataFrame
-    recordsDF = pd.read_excel(maisFlexisRecords)
+    recordsDF = pd.read_excel(maisFlexisRecords, skiprows=1)
     
     # Stripping the HTML tags and transforming the fields
     def stripAndTransform(x):
@@ -130,7 +129,6 @@ def getConversionNames(maisFlexisRecords, tablesPath):
             elif '<br>' in x:
                 return ','.join(x.split('<br>'))
         return x
-    
     
     # Apply the transformation with a single progress bar
     # Replacing applymap with progress_apply for better performance
@@ -249,8 +247,8 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
     The supported hash algorithms are 'md5' and 'sha256'.
     
     Parameters:
-    file_paths (list): List of paths to the files to be hashed.
-    exif_tool_path (str): Path to the ExifTool executable.
+    filePaths (list): List of paths to the files to be hashed.
+    exifToolPath (str): Path to the ExifTool executable.
     algorithm (str): The name of the algorithm to be used (default='md5').
 
     Returns:
@@ -271,18 +269,18 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
     ncols=80, 
     ascii=" ░▒▓█"):
         try:
-            # Create a temporary file
+            # Create a temporary file.
             tempFile = tempfile.NamedTemporaryFile(delete=False)
             tempPath = tempFile.name
             tempFile.close()
 
-            # Ensure the tempPath is deleted if it exists
+            # Ensure the tempPath is deleted if it exists.
             if os.path.exists(tempPath):
                 os.remove(tempPath)
 
             # The command to be used to run the locally installed ExifTool.
             command = [exifToolPath, '-all=', '-o', tempPath, filePath]
-            # Subprocess allows programs to run through the command-line-interface and capture its output
+            # Subprocess allows programs to run through the command-line-interface and capture its output.
             process = subprocess.Popen(args=command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             _, error = process.communicate()
 
@@ -293,8 +291,8 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
             # From the dictionary of possible hash functions, the name of the hash function of the specified algorithm 
             # argument is obtained and used to calculate the hash of that specific function.
             with open(tempPath, "rb") as f:
-                file_hash = hashFuncs.get(algorithm)(f.read()).hexdigest()
-                hashList.append(file_hash)
+                fileHash = hashFuncs.get(algorithm)(f.read()).hexdigest()
+                hashList.append(fileHash)
                 #print(f"{algorithm} hash is {file_hash}")
 
         # When the process fails we execute the following steps:
@@ -302,12 +300,12 @@ def getFileHash(filePaths, exifToolPath, algorithm='md5'):
             # Show the error message
             errorMessage = f"Error processing {filePath}: {e}"
             print(errorMessage)
-            # Add to hash_list to match the length of the pandas DataFrame.
+            # Add to hashList to match the length of the pandas DataFrame.
             hashList.append(errorMessage)
             continue
         
         # To ensure the tempPath is always removed before the next iteration in the loop
-        # we put it in the finally block
+        # we put it in the finally block.
         finally:
             if os.path.exists(tempPath):
                 os.remove(tempPath)
@@ -437,7 +435,7 @@ def getUniqueColors(imageFilePaths):
    
     # Calculate the number of unique colors for each of the files in the list of paths.
     for i in range(len(tqdm.tqdm(range(len(imageFilePaths)),
-                    desc='[START] Exctacting number of unique colors.',
+                    desc='[START] Extracting number of unique colors.',
                     bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
                     ncols=80, 
                     ascii=" ░▒▓█"))):
@@ -506,7 +504,7 @@ def getUniqueColorsTable(tablesPath, processedDataPath):
     uniqueColorsDF =\
     pd.read_sql(similarImagesSameResolution, con=connection)
     
-    # These paths are used to calculate the number of unique colors.
+    # The similar images where this is the case  are used to calculate the number of unique colors if
     if len(uniqueColorsDF) > 0:
         uniqueColorsDF['numUniqueColors'] = getUniqueColors(uniqueColorsDF['filePath'].tolist())
     
@@ -603,7 +601,7 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
     Returns:
     None
     """
-    print('\n######################  Obtaining exact duplicates  #####################')
+    print('\n######################  Obtaining exact duplicates  ######################')
     print('|------------------------------------------------------------------------|')
     print('\n[START] Analyzing initial hash data.')
     # Connecting to the database in tablesPath.
@@ -615,51 +613,49 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
     queryMD5andImageHash = """
     SELECT md5Hash, aHash, filePath
     FROM initialHashes
-
     WHERE (md5Hash, aHash) IN (
-    SELECT md5Hash, aHash
-    FROM initialHashes
-    GROUP BY md5Hash, aHash
-    HAVING COUNT(*) > 1
+        SELECT md5Hash, aHash
+        FROM initialHashes
+        GROUP BY md5Hash, aHash
+        HAVING COUNT(*) > 1
     )
     ORDER BY md5Hash
     """
 
-    # Images were md5Hash is duplicated but not aHash (md5 collision).
+    # Images were md5Hash is duplicated but not aHash (possible md5 collision).
     queryMD5notImageHash = """
     SELECT md5Hash, aHash, filePath
     FROM initialHashes
     WHERE md5Hash IN (
-    SELECT md5Hash
-    FROM initialHashes
-    GROUP BY md5Hash
-    HAVING COUNT(*) > 1
-    )
+        SELECT md5Hash
+        FROM initialHashes
+        GROUP BY md5Hash
+        HAVING COUNT(*) > 1
+        )
     AND aHash NOT IN (
-    SELECT aHash
-    FROM initialHashes
-    GROUP BY aHash
-    HAVING COUNT(*) > 1
+        SELECT aHash
+        FROM initialHashes
+        GROUP BY aHash
+        HAVING COUNT(*) > 1
     )
     ORDER BY md5Hash, aHash;
     """
 
-    # Images were md5Hash is not duplicated but aHash is (aHash collision or 
-    # different metadata).
+    # Images were md5Hash is not duplicated but aHash is (possible aHash collision).
     queryNotMD5AndImageHash = """
     SELECT md5Hash, aHash, filePath
     FROM initialHashes
     WHERE aHash IN (
-    SELECT aHash
-    FROM initialHashes
-    GROUP BY aHash
-    HAVING COUNT(*) > 1
-    )
+        SELECT aHash
+        FROM initialHashes
+        GROUP BY aHash
+        HAVING COUNT(*) > 1
+        )
     AND md5Hash NOT IN (
-    SELECT md5Hash
-    FROM initialHashes
-    GROUP BY md5Hash
-    HAVING COUNT(*) > 1
+        SELECT md5Hash
+        FROM initialHashes
+        GROUP BY md5Hash
+        HAVING COUNT(*) > 1
     )
     ORDER BY aHash, md5Hash;
     """
@@ -672,13 +668,13 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
     aHashAndNotMD5 = pd.read_sql(queryNotMD5AndImageHash,
                                 con=connection)
     print('[√] Analyzed initial hash data succesfully!')
-    # Calculating the additional hashes.
+    # Calculating the additional hashes only when needed.
     if len(noAHashAndMD5) > 0 or len(aHashAndNotMD5) > 0:
         print('\nPossible hash collissions found.')
         print('\n[START] calculating additional hashes.')
 
     if len(noAHashAndMD5) > 0:
-        noAHashAndMD5['sha256Hash'] = getFileHash(noAHashAndMD5['filePath'].tolist(),
+        noAHashAndMD5['sha256Hash'] = getFileHash(noAHashAndMD5['filePath'].tolist(), 
                                             exifToolPath, 
                                             algorithm='sha256')
     if len(aHashAndNotMD5) > 0:
@@ -698,7 +694,9 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
                                 noAHashAndMD5,  
                                 aHashAndNotMD5])
 
-    # Extracting the rows with calculated hashes.
+    # Extracting rows with calculated additional hashes only if data is available.
+    # If no data is available, an empty DataFrame with the required column names will be created.
+    # This ensures that SQL queries can still be run even when the resulting table has no data.
     sha256Rows =\
     finalHashesDF[['filePath', 'sha256Hash']].dropna() if 'sha256Hash' in finalHashesDF.columns \
                                                        else pd.DataFrame(columns=['filePath', 'sha256Hash'])
@@ -708,13 +706,14 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
                                                   else pd.DataFrame(columns=['filePath', 'pHash'])
 
 
-    # Storing the results in SQLite tables.
+    # Conditional storing of the results in SQLite tables.
+    # Only when there is data in the DataFrame.
     if not sha256Rows.empty:
         sha256Rows.to_sql(name='sha256Rows', 
                         con=connection, 
                         if_exists='replace',
                         index=False)
-         # If the DataFrame is empty, create the table with the correct schema (no data).
+    # If the DataFrame is empty, create the table with the correct schema (no data).
     else:
         sha256Rows.iloc[0:0].to_sql(name='sha256Rows', 
                         con=connection, 
@@ -726,23 +725,23 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
                         con=connection,
                         if_exists='replace',
                         index=False)
+    # If the DataFrame is empty, create the table with the correct schema (no data).
     else:
-        # If the DataFrame is empty, create the table with the correct schema (no data).
         pHashRows.iloc[0:0].to_sql(name='pHashes',
                         con=connection,
                         if_exists='replace',
                         index=False)
 
-        # Creating the table for exact duplicates.
+    # Creating the table for exact duplicates.
     exactDuplicatesQuery = """
     CREATE TABLE IF NOT EXISTS exactDuplicates AS
     SELECT 'md5Hash' AS hashType, md5Hash AS hashValue, filePath
     FROM initialHashes
     WHERE (md5Hash, aHash) IN (
-    SELECT md5Hash, aHash
-    FROM initialHashes
-    GROUP BY md5Hash, aHash
-    HAVING COUNT(*) > 1
+        SELECT md5Hash, aHash
+        FROM initialHashes
+        GROUP BY md5Hash, aHash
+        HAVING COUNT(*) > 1
     )
 
     UNION ALL
@@ -750,10 +749,10 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
     SELECT 'sha256Hash' AS hashType, sha256Hash AS hashValue, filePath
     FROM sha256Rows
     WHERE sha256Hash IN (
-    SELECT sha256Hash
-    FROM sha256Rows
-    GROUP BY sha256Hash
-    HAVING COUNT(*) > 1
+        SELECT sha256Hash
+        FROM sha256Rows
+        GROUP BY sha256Hash
+        HAVING COUNT(*) > 1
     )
     ORDER BY hashType, hashValue, filePath;
     """
@@ -771,35 +770,35 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
 
 def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, processedDataPath):
     """
-    Maps exact duplicate records to MaisFlexis conversion names and saves the results to a CSV file.
+    Maps duplicate images to the MaisFlexis records and saves the results to a CSV file.
     
-    This function reads raw image data and exact duplicate records, transforms the necessary 
-    columns, and performs a database join operation to map duplicates to MaisFlexis records.
-    It outputs a CSV file with both mapped and unmapped duplicates, indicating their 
-    connection status.
+    This function reads the MaisFlexis record data associated to the images.
+    It also extracts duplicate images from the exactDuplicates DataFrame and transforms the file paths. 
+    From here the unique filename ('Bestandsnaam') is extracted and used to perform a database join operation to map duplicates to MaisFlexis records.
+    It outputs a CSV file with both mapped and unmapped duplicates, indicating if they are coupled to MaisFlexis or not.
 
     Parameters:
-    tablesPath (str): Path to the SQLite database that contains the conversion names.
-    rawDataRecords (str): Path to the raw data CSV file containing the raw image data records.
-    exactDuplicates (str): Path to the exact duplicates CSV file containing duplicate image data.
-    processedDataPath (str): Path to save the output CSV file containing the mapped and unmapped duplicates.
+    tablesPath (str): The file path to the SQLite database that contains the conversion names.
+    rawDataRecords (str): The file path to the CSV file containing record ID information such as ID and filename.
+    exactDuplicates (str): The file path to the CSV file containing the exact duplicate image data.
+    processedDataPath (str): The file path where the final mapped duplicates CSV will be saved.
 
     Returns:
-    pandas.DataFrame: A DataFrame containing the mapped exact duplicates along with their 
-    conversion names and mapping status.
+    pandas.DataFrame: A DataFrame containing both linked and unlinked exact duplicate images, along with
+    their associated record ID information such as file name and ID number.
     """
 
     # Connecting to the database in tablesPath.
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
-    print('\n################ Mapping images to MaisFlexis records #################')
+    print('\n################## Mapping images to MaisFlexis records ##################')
     print('|------------------------------------------------------------------------|')
     print('\n[START] Transforming duplicate records and preparing data for mapping.')
-    # Reading the dataRecords and exactDuplicatesDF
-    rawDataRecordsDF = pd.read_csv(rawDataRecords, low_memory=False)
+    # Reading the dataRecords and exactDuplicatesDF.
+    rawDataRecordsDF = pd.read_csv(rawDataRecords, sep=';', low_memory=False, skiprows=1)
     exactDuplicatesDF = pd.read_csv(exactDuplicates)
         
-    # Transformation on filePath to obtain common unique column values 
+    # Transformation on filePath to obtain common unique column values. 
     exactDuplicatesDF['Bestandsnaam'] =\
     exactDuplicatesDF['filePath'].str.split('\\').str.get(-1)
 
@@ -808,14 +807,13 @@ def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, 
                              con=connection,
                              if_exists='replace',
                              index=False)
-    
+
     rawDataRecordsDF.rename(columns={'BESTANDSNAAM' : 'Bestandsnaam'}, inplace=True)
 
     rawDataRecordsDF.to_sql(name='rawDataRecords', 
                   con=connection, 
                   if_exists='replace',
                   index=False)
-    
     
     print('[√] Data transformed and loaded into the database.')
     print('\n[START] Mapping exact duplicates to MaisFlexis conversion names.')
@@ -839,10 +837,18 @@ def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, 
     mappedDuplicatesDF = pd.read_sql("SELECT * FROM mappedDuplicates", con=connection)
     mappedDuplicatesDF.loc['Koppelingstatus'] = 'gekoppeld'
     
+    # The exact duplicates where the 'Bestandsnaam' is not found in the MaisFlexis records dataframe
+    # are not mapped to MaisFlexis yet. A copy is made of this resulting dataframe to avoid pandas warning when 
+    # modifying a slice of a dataframe.  
     unmappedDuplicatesDF =\
     exactDuplicatesDF[~exactDuplicatesDF.Bestandsnaam.isin(rawDataRecordsDF['Bestandsnaam'].to_list())].copy()
 
-    unmappedDuplicatesDF.loc[:, 'Koppelingstatus'] = 'ongekoppeld'
+    # If all the duplicates are mapped the above dataframe will be empty and no Koppelingstatus can be assigned.
+    # First check if this is empty to avoid an error.
+    if not unmappedDuplicatesDF.empty:
+        unmappedDuplicatesDF.loc[:, 'Koppelingstatus'] = 'ongekoppeld'
+
+    # Vertical concatenation of the unmapped and mapped duplicate dataframes.
     exactDuplicatesMapped = pd.concat([unmappedDuplicatesDF, mappedDuplicatesDF])   
 
     exactDuplicatesMapped.to_csv(os.path.join(processedDataPath, 'duplicateImagesMapped.csv'), index=False)
@@ -871,7 +877,7 @@ def getSimilarImages(tablesPath, processedDataPath):
     connection = sqlite3.connect(database=tablesPath)
     cursor = connection.cursor()
 
-    print('\n######################   Obtaining similar images   #####################')
+    print('\n######################   Obtaining similar images   ######################')
     print('|------------------------------------------------------------------------|')
     print('\n[START] Analyzing image hashes.')
     # Query to select images with duplicate pHash.
@@ -968,7 +974,7 @@ def getSimilarImagesRanked(tablesPath, processedDataPath):
     # Saving the DataFrame to a CSV file.
     similarImagesRankedDF = similarImagesRankedDF.to_csv(os.path.join(processedDataPath, 'similarImagesRanked.csv'), index=False)
     
-    # Committing the changes and closing the connection
+    # Committing the changes and closing the connection.
     connection.commit()
     connection.close()
     print('[√] Similar images ranked succesfully!')
@@ -977,19 +983,23 @@ def getSimilarImagesRanked(tablesPath, processedDataPath):
     
 def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages, processedDataPath):
     """
-    This function categorizes the exact duplicates as 'gekoppeld' or 'ongekoppeld', 
-    extracts the code and number from the filePath of 'gekoppeld', combines it into a new
-    column and maps it to the MaisFlexis records by joining on this column. This information is not obtainable 
-    from the 'ongekoppeld' filepaths, so here they are instead mapped using the common hashvalue
-    between 'ongekoppeld' and 'gekoppeld'. 
+    Maps similar images to the MaisFlexis records and saves the results to a CSV file.
+    
+    This function reads the MaisFlexis record data associated to the images.
+    It also extracts similar images from the exactDuplicates DataFrame and transforms the file paths. 
+    From here the unique filename ('Bestandsnaam') is extracted and used to perform a database join operation to map duplicates to MaisFlexis records.
+    It outputs a CSV file with both mapped and unmapped duplicates, indicating if they are coupled to MaisFlexis or not.
 
     Parameters:
-    tablesPath (str): Specifies the path of the SQLite database file.
-    exifToolPath (str): Path to the ExifTool executable.
-    processedDataPath (str): The path where the processed data is stored.
+    tablesPath (str): The file path to the SQLite database that contains the conversion names.
+    rawDataRecords (str): The file path to the CSV file containing record ID information such as ID and filename.
+    exactDuplicates (str): The file path to the CSV file containing the exact duplicate image data.
+    processedDataPath (str): The file path where the final mapped duplicates CSV will be saved.
 
     Returns:
-    pandas.DataFrame: DataFrame containing the mapped duplicates and their conversion names.
+    pandas.DataFrame: A DataFrame containing both linked and unlinked exact duplicate images, along with
+    their associated record ID information such as file name and ID number.
+
     """
 
     # Connecting to the database in tablesPath.
@@ -997,7 +1007,7 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages,
     cursor = connection.cursor()
     print('\n[START] Transforming similar records and preparing data for mapping.')
     # Reading the dataRecords and exactDuplicatesDF
-    rawDataRecordsDF = pd.read_csv(rawDataRecords, low_memory=False)
+    rawDataRecordsDF = pd.read_csv(rawDataRecords, delimiter=';', low_memory=False, skiprows=1)
     similarImagesDF = pd.read_csv(similarImages)
 
         
@@ -1013,7 +1023,7 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages,
     print('[√] Data transformed and loaded into the database.')
     print('\n[START] Mapping similar images to MaisFlexis conversion names.')
     
-    # Query to join the duplicate images with the MaisFlexis records.
+    # Query to join the similar images with the MaisFlexis records.
     mappedDuplicatesQuery = """
     CREATE TABLE IF NOT EXISTS mappedSimilarImages AS
     SELECT 
@@ -1034,6 +1044,10 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages,
 
     mappedSimilarImagesDF['Koppelingstatus'] = 'gekoppeld'
 
+    # The similar images where the 'Bestandsnaam' is not found in the MaisFlexis records dataframe
+    # are not mapped to MaisFlexis yet. A copy is made of this resulting dataframe to avoid pandas warning when 
+    # modifying a slice of a dataframe.  
+    
     unmappedSimilarImagesDF = similarImagesDF[~similarImagesDF.Bestandsnaam.isin(rawDataRecordsDF['BESTANDSNAAM'].to_list())]
     unmappedSimilarImagesDF['Koppelingstatus'] = 'ongekoppeld'
     similarImagesMapped = pd.concat([unmappedSimilarImagesDF, mappedSimilarImagesDF])   
@@ -1043,11 +1057,10 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages,
     # Closing the database connection.
     connection.close()
     print('[√] Similar images successfully mapped to MaisFlexis records!')
+    print('\n|------------------------------------------------------------------------|')
+    print('########################### Analysis complete! ###########################')
+    print('\nThe results are saved in the data\\processed folder.')
 
     return similarImagesMapped
 
 
-def mapImagesToDescription(maisFlexisDescriptions, tablesPath):
-    print('\n########################### Analysis complete! ###########################')
-    print('\nThe results are saved in the data\\processed folder.')
-    pass
