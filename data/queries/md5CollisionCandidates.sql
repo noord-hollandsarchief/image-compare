@@ -1,4 +1,3 @@
--- SQLite
 SELECT md5Hash, aHash, filePath
 FROM initialHashes
 WHERE md5Hash IN (
@@ -6,7 +5,7 @@ WHERE md5Hash IN (
     FROM initialHashes
     GROUP BY md5Hash
     HAVING COUNT(*) > 1
-)
+    )
 AND aHash NOT IN (
     SELECT aHash
     FROM initialHashes

@@ -1,4 +1,3 @@
--- rows where only pHash is duplicated
 SELECT pHash, filePath
 FROM pHashes
 WHERE pHash IN (

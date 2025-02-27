@@ -1,6 +1,6 @@
 SELECT p.filePath, p.pHash, e.*
 FROM pHashes p
-JOIN exifdata e ON p.filePath = e.filePath
+JOIN exifData e ON p.filePath = e.filePath
 WHERE p.pHash IN (
     SELECT pHash
     FROM pHashes

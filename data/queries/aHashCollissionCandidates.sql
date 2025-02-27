@@ -1,4 +1,3 @@
--- SQLite
 SELECT md5Hash, aHash, filePath
 FROM initialHashes
 WHERE aHash IN (
