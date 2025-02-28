@@ -1,11 +1,11 @@
 # image-compare
 
 ## Description
-This repository contains code that can find exact duplicates in a directory of images and rank similar images based on resolution and the number of unique colors. The exact duplicates and similar images are identified using a combined approach of file hashing and image hashing.
+This repository contains code to find exact duplicates in a directory of images and rank similar images based on resolution and unique colors using file and image hashing.
 
-Additionally, the images are mapped to the MaisFlexis records they belong to using their filenames and corresponding record IDs. The packages required to run the scripts are listed in `requirements.txt`. 
+**Optional**: The images can also be mapped to MaisFlexis records based on filenames and record IDs, but only if the mapping files are in the correct format (see field descriptions in the first row of each file).
 
-**Note**: This is a work in progress and will continue to be improved.
+**Note**: This project is a work in progress. A more representative test set will be added soon. The current set lacks similar images.
 
 ## Data
 
@@ -13,8 +13,8 @@ Two excel files are used to check if the images are coupled to MaisFlexis.
 
 These are:
 
-1. Data_beeldbank (contained in `data/raw/Data_beeldbank`)
-2. SCN_BEELDBANK (contained in `data/raw/SCN_BEELDBANK`)
+1. Data_beeldbank (contained in `data/raw/Data_beeldbank/270`)
+2. SCN_BEELDBANK (contained in `data/raw/SCN_BEELDBANK/270`)
 
 The fields are described in the first line of each of the respective files.
 The queries used in the analysis are also included. These can be found in the data/queries folder.
