@@ -1,2 +1,2 @@
-*.py linguist-language=Python
+scripts/*.py linguist-language=Python
 tools/* linguist-vendored
