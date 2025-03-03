@@ -9,15 +9,17 @@ This repository contains code to find exact duplicates in a directory of images 
 
 ## Data
 
-Two excel files are used to check if the images are coupled to MaisFlexis. 
+Two excel files are used to link images to MaisFlexis record ID information.
 
 These are:
 
-1. Data_beeldbank (contained in `data/raw/Data_beeldbank/270`)
-2. SCN_BEELDBANK (contained in `data/raw/SCN_BEELDBANK/270`)
-
-The fields are described in the first line of each of the respective files.
-The queries used in the analysis are also included. These can be found in the data/queries folder.
+1. Data_beeldbank_270 (located in `data/raw/Data_beeldbank/270`)
+   - Contains MaisFlexis fields at the record ID level.
+2. SCN_BEELDBANK_270 (located in `data/raw/SCN_BEELDBANK/270`)
+   - Contains the MaisFlexis Record IDs and filenames of the images that are linked to MaisFlexis.
+   
+The field descriptions can be found in the first row of each respective file.
+The queries used in the analysis are also included and can be found in the `data/queries` folder.
 
 ## Scripts
 `imageCompare.py`: Contains the core functions of the image analysis pipeline. 
@@ -286,6 +288,4 @@ The pipeline will then start running.
 This project provides the following features:
 - **Find exact duplicates** in a specified directory using a combined approach of file hashing and image hashing.
 - **Rank similar images** based on resolution and the number of unique colors.
-- **Link images to MaisFlexis** based on their accession number and inventory number, if possible.
-- **Connect duplicate/similar images that are not linkable by accession and inventory number** through matching hash values between linked and non-linked images.
-
+- **Link images to MaisFlexis record ID information** based on record ID and filename of images that are linked to MaisFlexis.
