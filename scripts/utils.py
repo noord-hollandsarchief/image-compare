@@ -28,6 +28,7 @@ def createPaths():
         'exifData': os.path.join(folderPaths['processedData'], 'exifData.csv'),
         'exactDuplicates': os.path.join(folderPaths['processedData'], 'exactDuplicates.csv'),
         'similarImages': os.path.join(folderPaths['processedData'], 'similarImages.csv'),
+        'similarImagesRanked': os.path.join(folderPaths['processedData'], 'similarImagesRanked.csv'),
         'exactDuplicatesMapped': os.path.join(folderPaths['processedData'], 'exactDuplicatesMapped.csv'),
         'similarImagesMapped': os.path.join(folderPaths['processedData'], 'similarImagesMapped.csv'),
         'hashPath': os.path.join(folderPaths['processedData'], 'imagesHash.csv')
