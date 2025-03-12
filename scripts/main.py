@@ -40,23 +40,23 @@ def main():
                                     exifToolPath=exifToolPath,
                                     processedDataPath=folderPaths['processedData'])
 
-    ########## Analysis on the data ##########
-    ##########################################
+    ######### Analysis on the data ##########
+    #########################################
 
     imageCompare.getSimilarImages(tablesPath=filePaths['tables'],
                                   processedDataPath=folderPaths['processedData'])
     # Obtaining the number of unique colors data.
     imageCompare.getUniqueColorsTable(tablesPath=filePaths['tables'],
                                       processedDataPath=folderPaths['processedData'])
-    #Ranking the similar images based on resolution and number of unique colors.
+    # Ranking the similar images based on resolution and number of unique colors.
     imageCompare.getSimilarImagesRanked(tablesPath=filePaths['tables'],
                                         processedDataPath=folderPaths['processedData']) 
      
-    ## Mapping images to MaisFlexis records ##
-    ################ *OPTIONAL* ################
+    # Mapping images to MaisFlexis records ##
+    ############### *OPTIONAL* ################
 
     if mapping == 'Y':
-        # Parsing the MaisFlexis records.
+    # Parsing the MaisFlexis records.
         imageCompare.getConversionNames(maisFlexisRecords=filePaths['maisFlexisRecords'],
                                         tablesPath=filePaths['tables'])
         # Mapping the images to MaisFlexis Records
@@ -67,8 +67,9 @@ def main():
         
         imageCompare.mapSimilarImagesToConversionNames(tablesPath=filePaths['tables'], 
                                                     rawDataRecords=filePaths['rawDataRecords'],
-                                                    similarImages=filePaths['similarImages'],
+                                                    similarImagesRanked=filePaths['similarImagesRanked'],
                                                     processedDataPath=folderPaths['processedData'])
-        
+
 if __name__ == "__main__":
     main()
+
