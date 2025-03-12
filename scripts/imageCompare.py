@@ -376,8 +376,8 @@ def makeTables(tablesPath):
     CREATE TABLE IF NOT EXISTS exifData (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         FileSize TEXT,
-        XResolution TEXT,
-        YResolution TEXT
+        XResolution INT,
+        YResolution INT
         )
     ''')                 
 
@@ -397,9 +397,9 @@ def makeTables(tablesPath):
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS descriptionData (
         ID INTEGER PRIMARY KEY AUTOINCREMENT,
-        CODE TEXT,
+        CODE INTEGER,
         AET_ID TEXT,
-        NUMMER TEXT,
+        NUMMER INTEGER,
         CODE_1 INTEGER,
         BEGINJAAR INTEGER,
         EINDJAAR INTEGER,
@@ -434,11 +434,11 @@ def getUniqueColors(imageFilePaths):
     numUniqueColorsList = [] 
    
     # Calculate the number of unique colors for each of the files in the list of paths.
-    for i in range(len(tqdm.tqdm(range(len(imageFilePaths)),
+    for i in tqdm.tqdm(range(len((imageFilePaths))),
                     desc='[START] Extracting number of unique colors.',
                     bar_format="{desc}: {percentage:5.2f}% |{bar}| {n_fmt}/{total_fmt}", 
                     ncols=80, 
-                    ascii=" ░▒▓█"))):
+                    ascii=" ░▒▓█"):
         try:
             image = Image.open(imageFilePaths[i])
             image = image.convert('RGB')
@@ -473,32 +473,50 @@ def getUniqueColorsTable(tablesPath, processedDataPath):
     
     # From the similar images, the highest resolutions are extracted.
     similarImagesSameResolution = """
+    WITH TotalPixelCounts AS (
     SELECT
+        s.hashValue,
         e.filePath,
         e.XResolution,
-        e.YResolution
+        e.YResolution,
+        e.XResolution * e.YResolution AS PixelCount
     FROM
         exifData e
-    JOIN
-        similarImages s ON e.filePath = s.filePath
-    WHERE
-        (e.XResolution, e.YResolution) IN (
-            SELECT
-                MAX(e2.XResolution),
-                MAX(e2.YResolution)
-            FROM
-                exifData e2
-            JOIN
-                similarImages s2 ON e2.filePath = s2.filePath
-            WHERE
-                s2.hashValue = s.hashValue
-            GROUP BY
-                s2.hashValue
-        )
+    JOIN similarImages s ON e.filePath = s.filePath
+    ),
+    MaxPixelCounts AS (
+        SELECT
+            hashValue,
+            MAX(PixelCount) AS MaxPixelCount
+        FROM
+            TotalPixelCounts
+        GROUP BY
+            hashValue
+    ),
+    GroupsWithEqualPixelCounts AS (
+        SELECT
+            t.hashValue
+        FROM
+            TotalPixelCounts t
+        JOIN MaxPixelCounts m ON t.hashValue = m.hashValue
+        WHERE
+            t.PixelCount = m.MaxPixelCount
+        GROUP BY
+            t.hashValue
+        HAVING COUNT(*) > 1
+    )
+    SELECT
+        t.hashValue,
+        t.filePath,
+        t.XResolution,
+        t.YResolution,
+        t.PixelCount
+    FROM
+        TotalPixelCounts t
+    JOIN GroupsWithEqualPixelCounts g ON t.hashValue = g.hashValue
     ORDER BY
-        s.hashValue,    
-        e.XResolution DESC,
-        e.YResolution DESC;
+        t.hashValue,
+        t.PixelCount DESC;
     """ 
     
     uniqueColorsDF =\
@@ -795,7 +813,7 @@ def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, 
     print('|------------------------------------------------------------------------|')
     print('\n[START] Transforming duplicate records and preparing data for mapping.')
     # Reading the dataRecords and exactDuplicatesDF.
-    rawDataRecordsDF = pd.read_csv(rawDataRecords, sep=';', low_memory=False, skiprows=1)
+    rawDataRecordsDF = pd.read_csv(rawDataRecords, delimiter=';', low_memory=False, skiprows=1)
     exactDuplicatesDF = pd.read_csv(exactDuplicates)
         
     # Transformation on filePath to obtain common unique column values. 
@@ -821,7 +839,7 @@ def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, 
     mappedDuplicatesQuery = """
     CREATE TABLE IF NOT EXISTS mappedDuplicates AS
     SELECT 
-        c.ID, c.AANVRAAGNUMMER, c.NUMMERING_CONVERSIE, 
+        c.ID, c.CODE, c.NUMMER, c.CODE_1, c.AANVRAAGNUMMER, c.NUMMERING_CONVERSIE, 
         d.filePath, d.hashValue, d.hashType, r.TOEGANGSCODE, r.SCN_ID
     FROM 
         conversionNames c
@@ -835,7 +853,10 @@ def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, 
     cursor.execute(mappedDuplicatesQuery)
     # Reading the exactDuplicates table as a pandas DataFrame.
     mappedDuplicatesDF = pd.read_sql("SELECT * FROM mappedDuplicates", con=connection)
-    mappedDuplicatesDF.loc['Koppelingstatus'] = 'gekoppeld'
+    mappedDuplicatesDF = mappedDuplicatesDF.reset_index(drop=True)
+
+    if not mappedDuplicatesDF.empty:
+        mappedDuplicatesDF.loc[:, 'Koppelingstatus'] = 'gekoppeld'
     
     # The exact duplicates where the 'Bestandsnaam' is not found in the MaisFlexis records dataframe
     # are not mapped to MaisFlexis yet. A copy is made of this resulting dataframe to avoid pandas warning when 
@@ -929,41 +950,47 @@ def getSimilarImagesRanked(tablesPath, processedDataPath):
     # Query to create the similarImagesRanked table based on pHash,
     # resolution and number of unique colors.
     # The best image is the one with the highest resolution.
+    # For this we calculate and rank based on the total pixel count.
     # However sometimes there is no highest resolution, in that 
     # case the number of unique color is used to determine the best image.
     rankedImagesQuery = """
     CREATE TABLE IF NOT EXISTS similarImagesRanked AS
     WITH RankedFiles AS (
-        SELECT 
-            s.filePath, 
-            s.hashType,
-            s.hashValue, 
-            e.XResolution, 
-            e.YResolution, 
-            u.numUniqueColors,
-            DENSE_RANK() OVER (
-                PARTITION BY s.hashValue 
-                ORDER BY 
-                    CASE 
-                        WHEN u.numUniqueColors IS NOT NULL THEN 1
-                        ELSE 0
-                    END DESC,
-                    u.numUniqueColors DESC,
-                    e.XResolution DESC,
-                    e.YResolution DESC
-                ) AS rank
-        FROM similarImages s
-        JOIN exifdata e ON s.filePath = e.filePath
-        LEFT JOIN uniqueColorData u ON s.filePath = u.filePath
-        WHERE s.hashValue IN (
-            SELECT hashValue
-            FROM similarImages
-            GROUP BY hashValue
-            HAVING COUNT(hashValue) > 1
-            )
+    SELECT 
+        s.filePath, 
+        s.hashType,
+        s.hashValue, 
+        e.XResolution, 
+        e.YResolution, 
+        u.numUniqueColors,
+        DENSE_RANK() OVER (
+            PARTITION BY s.hashValue 
+            ORDER BY 
+                CASE 
+                    WHEN e.XResolution IS NOT NULL AND e.YResolution IS NOT NULL 
+                    THEN e.XResolution * e.YResolution
+                    ELSE 0
+                END DESC,
+
+                CASE 
+                    WHEN u.numUniqueColors IS NOT NULL THEN u.numUniqueColors
+                    ELSE 0
+                END DESC
+        ) AS rank
+    FROM similarImages s
+    JOIN exifdata e ON s.filePath = e.filePath
+    LEFT JOIN uniqueColorData u ON s.filePath = u.filePath
+    WHERE s.hashValue IN (
+        SELECT hashValue
+        FROM similarImages
+        GROUP BY hashValue
+        HAVING COUNT(hashValue) > 1
+        )
     )
-    SELECT * FROM RankedFiles
+    SELECT * 
+    FROM RankedFiles
     ORDER BY hashValue ASC, rank ASC;
+
     """
     # Executing the query to create the ranked table.
     cursor.execute(rankedImagesQuery)
@@ -981,7 +1008,7 @@ def getSimilarImagesRanked(tablesPath, processedDataPath):
     return similarImagesRankedDF
 
     
-def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages, processedDataPath):
+def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImagesRanked, processedDataPath):
     """
     Maps similar images to the MaisFlexis records and saves the results to a CSV file.
     
@@ -1008,14 +1035,14 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages,
     print('\n[START] Transforming similar records and preparing data for mapping.')
     # Reading the dataRecords and exactDuplicatesDF
     rawDataRecordsDF = pd.read_csv(rawDataRecords, delimiter=';', low_memory=False, skiprows=1)
-    similarImagesDF = pd.read_csv(similarImages)
+    similarImagesRankedDF = pd.read_csv(similarImagesRanked)
 
         
     # Transformation on filePath to obtain common unique column values 
-    similarImagesDF['Bestandsnaam'] = similarImagesDF['filePath'].str.split('\\').str.get(-1)
+    similarImagesRankedDF['Bestandsnaam'] = similarImagesRankedDF['filePath'].str.split('\\').str.get(-1)
 
     # Saving the records data as an sql table 
-    similarImagesDF.to_sql(name='similarImages',
+    similarImagesRankedDF.to_sql(name='similarImagesRanked',
                              con=connection,
                              if_exists='replace',
                              index=False)
@@ -1024,31 +1051,29 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImages,
     print('\n[START] Mapping similar images to MaisFlexis conversion names.')
     
     # Query to join the similar images with the MaisFlexis records.
-    mappedDuplicatesQuery = """
+    mappedSimilarImagesQuery = """
     CREATE TABLE IF NOT EXISTS mappedSimilarImages AS
     SELECT 
-        c.ID, c.AANVRAAGNUMMER, c.NUMMERING_CONVERSIE, 
-        d.filePath, d.hashValue, d.hashType, r.TOEGANGSCODE, r.SCN_ID
+        c.ID, c.CODE, c.NUMMER, c.CODE_1, c.AANVRAAGNUMMER, c.NUMMERING_CONVERSIE, 
+        d.filePath, d.hashValue, d.hashType, d.XResolution, d.YResolution, d.numUniqueColors, d.rank, r.TOEGANGSCODE, r.SCN_ID
     FROM 
         conversionNames c
     JOIN 
-        similarImages d ON 
+        similarImagesRanked d ON 
             d.Bestandsnaam = r.Bestandsnaam
     JOIN 
         rawDataRecords r ON r.ID = c.ID;
         """
         
-    cursor.execute(mappedDuplicatesQuery)
+    cursor.execute(mappedSimilarImagesQuery)
     # Reading the exactDuplicates table as a pandas DataFrame.
     mappedSimilarImagesDF = pd.read_sql("SELECT * FROM mappedSimilarImages", con=connection)
-
-    mappedSimilarImagesDF['Koppelingstatus'] = 'gekoppeld'
 
     # The similar images where the 'Bestandsnaam' is not found in the MaisFlexis records dataframe
     # are not mapped to MaisFlexis yet. A copy is made of this resulting dataframe to avoid pandas warning when 
     # modifying a slice of a dataframe.  
     
-    unmappedSimilarImagesDF = similarImagesDF[~similarImagesDF.Bestandsnaam.isin(rawDataRecordsDF['BESTANDSNAAM'].to_list())]
+    unmappedSimilarImagesDF = similarImagesRankedDF[~similarImagesRankedDF.Bestandsnaam.isin(rawDataRecordsDF['BESTANDSNAAM'].to_list())]
     unmappedSimilarImagesDF['Koppelingstatus'] = 'ongekoppeld'
     similarImagesMapped = pd.concat([unmappedSimilarImagesDF, mappedSimilarImagesDF])   
 
