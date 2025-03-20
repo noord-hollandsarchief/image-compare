@@ -105,6 +105,8 @@ def getConversionNames(maisFlexisRecords, tablesPath):
     the filepaths of the analyzed images and the maisFlexisRecords to allow coupling through a join.
 
     Parameters:
+    maisFlexisRecords (str): The path to the file containing the records from MaisFlexis.
+    tablesPath (str): The path to the SQLite database file.
 
     Returns:
     pandas DataFrame: The processed MaisFlexis records. 
@@ -164,6 +166,7 @@ def getDescriptionData(maisFlexisDescriptions, tablesPath):
 
     Parameters:
     maisFlexisDescriptions (str): The path to the file containing the MaisFlexis descriptions
+    tablesPath (str): The path to the SQLite database file.
 
     Returns:
     pandas DataFrame: The processed MaisFlexis descriptions. 
@@ -210,8 +213,7 @@ def getImageHash(filePath, algorithm='average_hash'):
     The supported hash algorithms are 'average_hash' and 'phash'.
     
     Parameters:
-    filePaths (list): List of paths to the files to be hashed.
-    exifToolPath (str): Path to the ExifTool executable.
+    filePath (str): The path to the file to be hashed.
     algorithm (str): The name of the algorithm to be used (default='md5').
 
     Returns:
@@ -320,7 +322,7 @@ def getInitialHashData(allImageFilePaths, hashPath, exifToolPath):
     
     Parameters:
     allImageFilePaths (list): List of paths to the files to be hashed.
-    hashPath (str): Path to save the resulting exifData.csv.
+    hashPath (str): Path to the exifData.csv file.
     exifToolPath (str): Path to the ExifTool executable.
     
     Returns:
@@ -349,7 +351,7 @@ def makeTables(tablesPath):
 
     Parameters:
     
-    tablesPath (str): Specifies the path of the SQLite database file.
+    tablesPath (str): The path to the SQLite database file.
 
     Returns:
     None
@@ -419,7 +421,8 @@ def getUniqueColors(imageFilePaths):
     This function calculates the number of unique colors 
 
     Parameters:
-    imageFilePaths (list): Paths to image files.
+    imageFilePaths (list): The paths to the image files on which
+    the number of unique colors are calculated.
 
     Returns:
     A list with the number of unique colors calculated using the 
@@ -457,11 +460,11 @@ def getUniqueColors(imageFilePaths):
 def getUniqueColorsTable(tablesPath, processedDataPath):
     """
     This function extracts image file paths with the highest resolution for each hash value,
-    calls the getUniqueColors function to calculate the number of unique colors for each image, and stores the results in a SQLite table
-    and a CSV file.
+    calculates the number of unique colors in these images, and stores the results in both an 
+    SQLite table and a CSV file.
 
     Parameters:
-    tablesPath (str): Specifies the path of the SQLite database file.
+    tablesPath (str): The path to the SQLite database file.
     processedDataPath (str): The path where the processed data is stored.
     
     Returns:
@@ -549,7 +552,6 @@ def getInitialImageData(allImageFilePaths, exifToolPath, hashPath, exifDataPath)
     
     Returns:
     A pandas DataFrame with the initial hash data. 
-    A pandas DataFrame with the processed MaisFlexis records. 
     A pandas DataFrame with the extracted Exif data.
     """
 
@@ -575,10 +577,9 @@ def fillTablesInitialData(exifData, initialHashData, tablesPath):
     and fills them with the three pandas DataFrames returned by getInitialImageData.
 
     Parameters:
-    exifData (pandas DataFrame): The extracted Exif data
-    namesData (pandas DataFrame): The processed MaisFlexis records.
+    exifData (pandas DataFrame): The extracted Exif metadata.
     initialHashData (pandas DataFrame): The initial hash data. 
-    tablesPath (str): Specifies the path of the SQLite database file.
+    tablesPath (str): The path to the SQLite database file.
     
     Returns:
     None
@@ -611,9 +612,9 @@ def getExactDuplicates(tablesPath, exifToolPath, processedDataPath):
     and a CSV file.
 
     Parameters:
-    tablesPath (str): Specifies the path of the SQLite database file.
+    tablesPath (str): The path to the SQLite database file.
     exifToolPath (str): Path to the ExifTool executable.
-    processedDataPath (str): The path where the processed data is stored.
+    processedDataPath (str): The path to the processed data folder.
 
     Returns:
     None
@@ -798,7 +799,7 @@ def mapDuplicatesToConversionNames(tablesPath, rawDataRecords, exactDuplicates, 
     tablesPath (str): The file path to the SQLite database that contains the conversion names.
     rawDataRecords (str): The file path to the CSV file containing record ID information such as ID and filename.
     exactDuplicates (str): The file path to the CSV file containing the exact duplicate image data.
-    processedDataPath (str): The file path where the final mapped duplicates CSV will be saved.
+    processedDataPath (str): The path to the processed data folder.
 
     Returns:
     pandas.DataFrame: A DataFrame containing both linked and unlinked exact duplicate images, along with
@@ -886,8 +887,8 @@ def getSimilarImages(tablesPath, processedDataPath):
     pandas DataFrame and CSV file.
 
     Parameters:
-    tablesPath (str): Specifies the path of the SQLite database file.
-    processedDataPath (str): The path where the processed data is stored.
+    tablesPath (str): The path to the SQLite database file.
+    processedDataPath (str): The path to the processed data folder.
 
     Returns:
     pandas.DataFrame: DataFrame containing the similar images 
@@ -935,8 +936,8 @@ def getSimilarImagesRanked(tablesPath, processedDataPath):
     and a CSV file.
 
     Parameters:
-    tablesPath (str): Specifies the path of the SQLite database file.
-    processedDataPath (str): The path where the processed data is stored.
+    tablesPath (str): The path to the SQLite database file.
+    processedDataPath (str): The path to the processed data folder.
 
     Returns:
     pandas.DataFrame: DataFrame containing the ranked similar images and their EXIF data.
@@ -989,7 +990,6 @@ def getSimilarImagesRanked(tablesPath, processedDataPath):
     SELECT * 
     FROM RankedFiles
     ORDER BY hashValue ASC, rank ASC;
-
     """
     # Executing the query to create the ranked table.
     cursor.execute(rankedImagesQuery)
@@ -1012,20 +1012,19 @@ def mapSimilarImagesToConversionNames(tablesPath, rawDataRecords, similarImagesR
     Maps similar images to the MaisFlexis records and saves the results to a CSV file.
     
     This function reads the MaisFlexis record data associated to the images.
-    It also extracts similar images from the exactDuplicates DataFrame and transforms the file paths. 
-    From here the unique filename ('Bestandsnaam') is extracted and used to perform a database join operation to map duplicates to MaisFlexis records.
-    It outputs a CSV file with both mapped and unmapped duplicates, indicating if they are coupled to MaisFlexis or not.
+    It also extracts similar images from the similarImagesRanked DataFrame and transforms the file paths. 
+    From here the unique filename ('Bestandsnaam') is extracted and used to perform a database join operation to map similar images to MaisFlexis records.
+    It outputs a CSV file with both mapped and unmapped similar images, indicating if they are coupled to MaisFlexis or not.
 
     Parameters:
-    tablesPath (str): The file path to the SQLite database that contains the conversion names.
-    rawDataRecords (str): The file path to the CSV file containing record ID information such as ID and filename.
-    exactDuplicates (str): The file path to the CSV file containing the exact duplicate image data.
-    processedDataPath (str): The file path where the final mapped duplicates CSV will be saved.
+    tablesPath (str): The path to the SQLite database file.
+    rawDataRecords (str): The path to the CSV file containing record ID information such as ID and filename.
+    similarImagesRanked (str): The path to the CSV file containing the ranked similar image data.
+    processedDataPath (str): The path where the processed data is stored.
 
     Returns:
-    pandas.DataFrame: A DataFrame containing both linked and unlinked exact duplicate images, along with
+    pandas.DataFrame: A DataFrame containing both linked and unlinked similar images, along with
     their associated record ID information such as file name and ID number.
-
     """
 
     # Connecting to the database in tablesPath.
