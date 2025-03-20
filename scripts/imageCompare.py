@@ -105,7 +105,6 @@ def getConversionNames(maisFlexisRecords, tablesPath):
     the filepaths of the analyzed images and the maisFlexisRecords to allow coupling through a join.
 
     Parameters:
-    maisFlexisRecords (str): The path to the file containing the records from MaisFlexis
 
     Returns:
     pandas DataFrame: The processed MaisFlexis records. 
