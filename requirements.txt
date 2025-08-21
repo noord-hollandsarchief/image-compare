@@ -2,5 +2,6 @@ Pillow
 imagehash
 numpy
 pandas
-ipykernel
 openpyxl
+tqdm
+beautifulsoup4
