@@ -286,6 +286,7 @@ The pipeline will then start running.
 
 ## Features
 This project provides the following features:
-- **Find exact duplicates** in a specified directory using a combined approach of file hashing and image hashing.
-- **Rank similar images** based on resolution and the number of unique colors.
-- **Link images to MaisFlexis record ID information** based on record ID and filename of images that are linked to MaisFlexis.
+- **Find exact duplicates** A combined approach of file hashing and image hashing.
+- **Find similar images** A combined approach of file hashing and image hashing followed by image ranking based on resolution and the number of unique colors.
+- **Link images to MaisFlexis record ID information** Based on record ID and filename of images that are linked to MaisFlexis.
+- **Provides lists of images to remove** Based on arbitrary choice for exact duplicates and highest rank for similar images. 
