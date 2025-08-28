@@ -24,3 +24,5 @@ data/raw/Beeldcollecties_nummeringen.xlsx
 data/raw/Data_beeldbank.xlsx
 data/raw/Beeldcollecties.xlsx
 data/raw/Lijst analyse duplicaten.xlsx
+data/processed/similarImagesMatchedMapped.xlsx
+data/processed/exactDuplicatesMatchedMapped.xlsx

@@ -64,7 +64,6 @@ def getAllImageFilePaths(directories):
     return allImageFilePaths
 
 
-
 def getExifData(allImageFilePaths, exifDataPath, exifToolPath):
     """
     Extract Exif metadata from a list of image files using ExifTool.

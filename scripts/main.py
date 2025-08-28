@@ -59,24 +59,32 @@ def main():
         imageCompare.getConversionNames(maisFlexisRecords=filePaths['maisFlexisRecords'],
                                         tablesPath=filePaths['tables'],
                                         pathToConversionNames=filePaths['conversionNames'])
+        
+        
         # Mapping the images to MaisFlexis Records
         imageCompare.mapDuplicatesToConversionNames(tablesPath=filePaths['tables'], 
                                                     rawDataRecords=filePaths['rawDataRecords'],
                                                     exactDuplicates=filePaths['exactDuplicates'],
                                                     pathToExactDuplicatesMatchedMapped=filePaths['exactDuplicatesMatchedMapped'])
                 
+        
+        imageCompare.compareExactDuplicates(tablesPath=filePaths['tables'],
+                                                pathToDescriptionData=filePaths['maisFlexisDescriptions'],
+                                                pathToExactDuplicatesMatchedMapped=filePaths['exactDuplicatesMatchedMapped'])
+        
         imageCompare.mapSimilarImagesToConversionNames(tablesPath=filePaths['tables'], 
                                                       rawDataRecords=filePaths['rawDataRecords'],
                                                       similarImagesRanked=filePaths['similarImagesRanked'],
                                                       pathToSimilarImagesMatchedMapped=filePaths['similarImagesMatchedMapped'])
         
+
         imageCompare.compareSimilarImages(tablesPath=filePaths['tables'],
                                           pathToSimilarImagesMatchedMapped=filePaths['similarImagesMatchedMapped'])
 
-        imageCompare.compareExactDuplicates(tablesPath=filePaths['tables'],
-                                            pathToDescriptionData=filePaths['maisFlexisDescriptions'],
-                                            pathToExactDuplicatesMatchedMapped=filePaths['exactDuplicatesMatchedMapped'])
+        
 
+
+ 
 if __name__ == "__main__":
     main()
 
